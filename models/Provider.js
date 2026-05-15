@@ -1,0 +1,453 @@
+// models/Provider.js
+
+const mongoose = require("mongoose");
+
+const providerSchema = new mongoose.Schema(
+  {
+    // =====================================================
+    // AUTH & ROLE
+    // =====================================================
+    role: {
+      type: String,
+      enum: ["provider"],
+      default: "provider",
+    },
+
+    authType: {
+      type: String,
+      enum: ["phone", "google", "apple", "email"],
+      default: "phone",
+    },
+
+    phone: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+
+    password: {
+      type: String,
+      select: false,
+    },
+
+    isPhoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    otp: {
+      code: String,
+      expiresAt: Date,
+    },
+
+    refreshToken: {
+      type: String,
+      select: false,
+    },
+
+    // =====================================================
+    // BASIC PROFILE
+    // =====================================================
+    fullName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    profileImage: {
+      type: String,
+      default: "",
+    },
+
+    bio: {
+      type: String,
+      maxlength: 500,
+    },
+
+    gender: {
+      type: String,
+      enum: ["male", "female", "other"],
+    },
+
+    dateOfBirth: Date,
+
+    languages: [String],
+
+    experienceYears: {
+      type: Number,
+      default: 0,
+    },
+
+    // =====================================================
+    // PROFESSIONAL DETAILS
+    // =====================================================
+    serviceCategory: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ServiceCategory",
+      required: true,
+    },
+
+    skills: [String],
+
+    services: [
+      {
+        title: {
+          type: String,
+          required: true,
+        },
+
+        description: String,
+
+        price: {
+          type: Number,
+          required: true,
+        },
+
+        pricingType: {
+          type: String,
+          enum: ["fixed", "hourly", "inspection"],
+          default: "fixed",
+        },
+
+        estimatedDurationMinutes: Number,
+
+        isActive: {
+          type: Boolean,
+          default: true,
+        },
+      },
+    ],
+
+    // =====================================================
+    // LOCATION
+    // =====================================================
+    address: {
+      houseNumber: String,
+      street: String,
+      landmark: String,
+      city: String,
+      state: String,
+      country: String,
+      postalCode: String,
+    },
+
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+
+      coordinates: {
+        type: [Number], // [lng, lat]
+        // required: true,
+      },
+    },
+
+    serviceRadiusKm: {
+      type: Number,
+      default: 10,
+    },
+
+    currentLocation: {
+      lat: Number,
+      lng: Number,
+      updatedAt: Date,
+    },
+
+    // =====================================================
+    // AVAILABILITY
+    // =====================================================
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
+
+    availabilityStatus: {
+      type: String,
+      enum: ["available", "busy", "offline"],
+      default: "offline",
+    },
+
+    workingHours: {
+      monday: {
+        isAvailable: {
+          type: Boolean,
+          default: true,
+        },
+        start: String,
+        end: String,
+      },
+
+      tuesday: {
+        isAvailable: {
+          type: Boolean,
+          default: true,
+        },
+        start: String,
+        end: String,
+      },
+
+      wednesday: {
+        isAvailable: {
+          type: Boolean,
+          default: true,
+        },
+        start: String,
+        end: String,
+      },
+
+      thursday: {
+        isAvailable: {
+          type: Boolean,
+          default: true,
+        },
+        start: String,
+        end: String,
+      },
+
+      friday: {
+        isAvailable: {
+          type: Boolean,
+          default: true,
+        },
+        start: String,
+        end: String,
+      },
+
+      saturday: {
+        isAvailable: {
+          type: Boolean,
+          default: true,
+        },
+        start: String,
+        end: String,
+      },
+
+      sunday: {
+        isAvailable: {
+          type: Boolean,
+          default: false,
+        },
+        start: String,
+        end: String,
+      },
+    },
+
+    // =====================================================
+    // DOCUMENT VERIFICATION
+    // =====================================================
+    aadhaarNumber: String,
+
+    panNumber: String,
+
+    aadhaarFrontImage: String,
+
+    aadhaarBackImage: String,
+
+    selfieImage: String,
+
+    policeVerificationDocument: String,
+
+    tradeLicenseDocument: String,
+
+    verificationStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+
+    rejectionReason: String,
+
+    verifiedAt: Date,
+
+    // =====================================================
+    // RATINGS & PERFORMANCE
+    // =====================================================
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+
+    totalReviews: {
+      type: Number,
+      default: 0,
+    },
+
+    totalBookings: {
+      type: Number,
+      default: 0,
+    },
+
+    completedBookings: {
+      type: Number,
+      default: 0,
+    },
+
+    cancelledBookings: {
+      type: Number,
+      default: 0,
+    },
+
+    completionRate: {
+      type: Number,
+      default: 0,
+    },
+
+    responseRate: {
+      type: Number,
+      default: 0,
+    },
+
+    // =====================================================
+    // EARNINGS & WALLET
+    // =====================================================
+    walletBalance: {
+      type: Number,
+      default: 0,
+    },
+
+    totalEarnings: {
+      type: Number,
+      default: 0,
+    },
+
+    totalWithdrawn: {
+      type: Number,
+      default: 0,
+    },
+
+    commissionPercentage: {
+      type: Number,
+      default: 10,
+    },
+
+    // =====================================================
+    // BANK DETAILS
+    // =====================================================
+    bankDetails: {
+      accountHolderName: String,
+      bankName: String,
+      accountNumber: String,
+      ifscCode: String,
+      upiId: String,
+    },
+
+    // =====================================================
+    // PORTFOLIO
+    // =====================================================
+    portfolioImages: [String],
+
+    beforeAfterImages: [
+      {
+        before: String,
+        after: String,
+      },
+    ],
+
+    // =====================================================
+    // DEVICE & NOTIFICATIONS
+    // =====================================================
+    deviceTokens: [String],
+
+    notificationPreferences: {
+      bookingAlerts: {
+        type: Boolean,
+        default: true,
+      },
+
+      marketingNotifications: {
+        type: Boolean,
+        default: true,
+      },
+
+      payoutNotifications: {
+        type: Boolean,
+        default: true,
+      },
+    },
+
+    // =====================================================
+    // ACCOUNT STATUS
+    // =====================================================
+    isBlocked: {
+      type: Boolean,
+      default: false,
+    },
+
+    blockedReason: String,
+
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+
+    lastSeenAt: Date,
+
+    // =====================================================
+    // SUBSCRIPTION / BOOST
+    // =====================================================
+    subscriptionPlan: {
+      type: String,
+      enum: ["free", "basic", "premium"],
+      default: "free",
+    },
+
+    boostExpiresAt: Date,
+
+    // =====================================================
+    // REFERRAL SYSTEM
+    // =====================================================
+    referralCode: String,
+
+    referredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Provider",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+// =====================================================
+// INDEXES
+// =====================================================
+
+// GEO SEARCH
+providerSchema.index({ location: "2dsphere" });
+
+// FAST SEARCH
+providerSchema.index({
+  fullName: "text",
+  skills: "text",
+});
+
+// CATEGORY FILTER
+providerSchema.index({
+  serviceCategory: 1,
+  averageRating: -1,
+});
+
+// =====================================================
+// MODEL
+// =====================================================
+
+
+const Provider = mongoose.model("Provider", providerSchema);
+
+module.exports = Provider;
