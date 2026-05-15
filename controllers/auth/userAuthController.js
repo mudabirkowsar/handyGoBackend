@@ -89,10 +89,10 @@ const loginUser = async (req, res) => {
         // 2. Find User
         const user = await User.findOne({
             $or: [
-                { email: identifier.toLowerCase() },
-                { phone: identifier }
+                { email: identifier.toLowerCase().trim() },
+                { phone: identifier.trim() }
             ],
-        }).select("+password tokens"); // Explicitly select tokens to check them
+        }).select("+password tokens");
 
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(400).json({ success: false, message: "Invalid credentials" });
@@ -103,28 +103,28 @@ const loginUser = async (req, res) => {
 
         // 3. Logic: Check if we should reuse an existing token
         if (isSingleSession && user.tokens && user.tokens.length > 0) {
-            // Use the most recent token already stored in DB
+            // Grab the last issued token
             token = user.tokens[user.tokens.length - 1].token;
-            
-            // Verify if the existing token is still valid (not expired)
+
+            // Verify if the existing token is still active and valid
             try {
                 jwt.verify(token, process.env.JWT_SECRET);
             } catch (err) {
-                // If expired, generate a new one
+                // Token expired or secret changed: generate a fresh one
                 token = generateToken(user._id, user.role);
                 await User.findByIdAndUpdate(user._id, {
-                    $set: { tokens: [{ token }] } // Reset to this one new token
+                    $set: { tokens: [{ token }] }
                 });
             }
         } else {
-            // 4. Standard Behavior: Generate new and push
+            // 4. Multi-session/Standard Behavior: Append new session token
             token = generateToken(user._id, user.role);
             await User.findByIdAndUpdate(user._id, {
-                $push: { 
-                    tokens: { 
-                        $each: [{ token }], 
-                        $slice: -5 
-                    } 
+                $push: {
+                    tokens: {
+                        $each: [{ token }],
+                        $slice: -5
+                    }
                 }
             });
         }
