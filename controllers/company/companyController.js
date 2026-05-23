@@ -12,9 +12,9 @@ const getMyCompanyProfile = async (req, res) => {
         const company = await Company.findById(
             req.user.id
         )
-        .populate("serviceCategories")
-        .populate("workers")
-        .select("-password");
+            .populate("serviceCategories")
+            .populate("workers")
+            .select("-password");
 
         if (!company) {
             return res.status(404).json({
@@ -118,10 +118,7 @@ const updateCompanyProfile = async (
 // =====================================================
 // CREATE COMPANY SERVICE
 // =====================================================
-const createCompanyService = async (
-    req,
-    res
-) => {
+const createCompanyService = async (req, res) => {
     try {
 
         const company = await Company.findById(
@@ -173,10 +170,7 @@ const createCompanyService = async (
 // =====================================================
 // GET COMPANY SERVICES
 // =====================================================
-const getCompanyServices = async (
-    req,
-    res
-) => {
+const getCompanyServices = async (req, res) => {
     try {
 
         const company = await Company.findById(
@@ -201,10 +195,7 @@ const getCompanyServices = async (
 // =====================================================
 // UPDATE COMPANY SERVICE
 // =====================================================
-const updateCompanyService = async (
-    req,
-    res
-) => {
+const updateCompanyService = async (req, res) => {
     try {
 
         const { serviceId } = req.params;
@@ -314,19 +305,14 @@ const deleteCompanyService = async (
 // =====================================================
 // GET ALL COMPANIES
 // =====================================================
-const getAllCompanies = async (
-    req,
-    res
-) => {
+const getAllCompanies = async (req, res) => {
     try {
-
-        const companies =
-            await Company.find({
-                verificationStatus:
-                    "approved",
-                isBlocked: false,
-                isDeleted: false,
-            })
+        const companies = await Company.find({
+            verificationStatus:
+                "approved",
+            isBlocked: false,
+            isDeleted: false,
+        })
             .populate("serviceCategories")
             .select("-password");
 
@@ -350,19 +336,16 @@ const getAllCompanies = async (
 // =====================================================
 // GET SINGLE COMPANY
 // =====================================================
-const getSingleCompany = async (
-    req,
-    res
-) => {
+const getSingleCompany = async (req, res) => {
     try {
 
         const company =
             await Company.findById(
                 req.params.companyId
             )
-            .populate("workers")
-            .populate("serviceCategories")
-            .select("-password");
+                .populate("workers")
+                .populate("serviceCategories")
+                .select("-password");
 
         if (!company) {
             return res.status(404).json({

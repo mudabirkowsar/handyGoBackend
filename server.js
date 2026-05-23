@@ -4,7 +4,6 @@ const cors = require('cors');
 const os = require('os');
 const mongoose = require('mongoose');
 
-const userAuthRoutes = require('./routes/auth/userAuthRoutes');
 const providerAuthRoutes = require('./routes/auth/providerAuthRoutes');
 const companyAuthRoutes = require('./routes/auth/companyAuthRoutes');
 const adminAuthRoutes = require('./routes/auth/adminAuthRoutes');
@@ -56,7 +55,7 @@ app.get('/', (req, res) => {
     });
 });
 
-app.use("/user-auth", userAuthRoutes);
+app.use("/user-auth", require("./routes/auth/userAuthRoutes"));
 app.use("/user-detail", userRoutes);
 app.use("/provider-auth", providerAuthRoutes);
 app.use("/company-auth", companyAuthRoutes);
@@ -67,6 +66,8 @@ app.use("/categories", categoryRoutes);
 
 app.use("/companies", companyRoutes);
 app.use("/workers", workerRoutes);
+
+app.use("/admin", require("./routes/admin/companyRoutes")); 
 
 // --- Error Handling ---
 app.use((err, req, res, next) => {

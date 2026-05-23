@@ -527,6 +527,145 @@ const getNearbyProviders = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Get current provider's working hours configuration
+ * @route   GET /api/v1/providers/working-hours
+ * @access  Private (Provider Only)
+ */
+const getWorkingHours = async (req, res) => {
+  try {
+    // Assuming authentication middleware attaches the logged-in provider's data to req.user
+    const providerId = req.user._id;
+
+    const provider = await Provider.findById(providerId).select("workingHours");
+
+    if (!provider) {
+      return res.status(404).json({
+        success: false,
+        message: "Provider account not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: provider.workingHours,
+    });
+  } catch (error) {
+    console.error("Error in getWorkingHours:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while fetching schedule.",
+    });
+  }
+};
+
+/**
+ * @desc    Update or initialize working hours for a provider
+ * @route   PUT /api/v1/providers/working-hours
+ * @access  Private (Provider Only)
+ */
+const updateWorkingHours = async (req, res) => {
+  try {
+    const providerId = req.user._id;
+    const { workingHours } = req.body;
+
+    if (!workingHours) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing workingHours configuration data payload.",
+      });
+    }
+
+    // List of expected keys matching the Mongoose schema path
+    const validDays = [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ];
+
+    // Simple structural validation to match schema requirements
+    for (const day of validDays) {
+      if (workingHours[day]) {
+        const { isAvailable, start, end } = workingHours[day];
+        
+        // If a day is marked active, ensure it contains standard timeline boundaries
+        if (isAvailable && (!start || !end)) {
+          return res.status(400).json({
+            success: false,
+            message: `Active operational days require valid start and end times. Error at: ${day}`,
+          });
+        }
+      }
+    }
+
+    // Construct precise dot-notation object update block to avoid overwriting unrelated profile fields
+    const updatedProvider = await Provider.findByIdAndUpdate(
+      providerId,
+      { $set: { workingHours: workingHours } },
+      { new: true, runValidators: true }
+    ).select("workingHours");
+
+    return res.status(200).json({
+      success: true,
+      message: "Working hours schedule configuration saved successfully.",
+      data: updatedProvider.workingHours,
+    });
+  } catch (error) {
+    console.error("Error in updateWorkingHours:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update configuration settings on the server.",
+    });
+  }
+};
+
+/**
+ * @desc    Quick switch alternative to toggle a single day's status instantly
+ * @route   PATCH /api/v1/providers/working-hours/toggle-day
+ * @access  Private (Provider Only)
+ */
+const toggleDayAvailability = async (req, res) => {
+  try {
+    const providerId = req.user._id;
+    const { day, isAvailable } = req.body;
+
+    const validDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+    if (!validDays.includes(day?.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid target day parameter received.",
+      });
+    }
+
+    // Explicitly update only the targeting day's boolean context flags
+    const updateQuery = {};
+    updateQuery[`workingHours.${day.toLowerCase()}.isAvailable`] = Boolean(isAvailable);
+
+    const updatedProvider = await Provider.findByIdAndUpdate(
+      providerId,
+      { $set: updateQuery },
+      { new: true }
+    ).select("workingHours");
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully altered ${day} availability configuration state.`,
+      data: updatedProvider.workingHours[day.toLowerCase()],
+    });
+  } catch (error) {
+    console.error("Error in toggleDayAvailability:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to parse single day modification criteria parameters.",
+    });
+  }
+};
+
+
 module.exports = {
     createService,
     getProviderServices,
@@ -539,4 +678,7 @@ module.exports = {
     getAllProviders,
     getSingleProvider,
     getNearbyProviders,
+    getWorkingHours,
+    updateWorkingHours,
+    toggleDayAvailability
 };

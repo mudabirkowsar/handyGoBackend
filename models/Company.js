@@ -1,11 +1,14 @@
 // models/Company.js
+
 const mongoose = require("mongoose");
 
 const companySchema = new mongoose.Schema(
   {
+
     // =====================================================
     // AUTH & ROLE
     // =====================================================
+
     role: {
       type: String,
       enum: ["company"],
@@ -18,20 +21,36 @@ const companySchema = new mongoose.Schema(
       default: "phone",
     },
 
+    tokens: [
+      {
+        token: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
+
     companyPhone: {
       type: String,
       required: true,
       unique: true,
       index: true,
+      trim: true,
     },
 
     companyEmail: {
       type: String,
       trim: true,
       lowercase: true,
+      default: "",
     },
 
     password: {
+      type: String,
+      select: false,
+    },
+
+    refreshToken: {
       type: String,
       select: false,
     },
@@ -46,14 +65,10 @@ const companySchema = new mongoose.Schema(
       default: false,
     },
 
-    refreshToken: {
-      type: String,
-      select: false,
-    },
-
     // =====================================================
     // COMPANY PROFILE
     // =====================================================
+
     companyName: {
       type: String,
       required: true,
@@ -74,11 +89,17 @@ const companySchema = new mongoose.Schema(
     description: {
       type: String,
       maxlength: 2000,
+      default: "",
     },
 
-    foundedYear: Number,
+    foundedYear: {
+      type: Number,
+    },
 
-    website: String,
+    website: {
+      type: String,
+      default: "",
+    },
 
     companySize: {
       type: String,
@@ -94,24 +115,39 @@ const companySchema = new mongoose.Schema(
     },
 
     // =====================================================
-    // OWNER / MANAGER DETAILS
+    // OWNER DETAILS
     // =====================================================
+
     ownerName: {
       type: String,
       required: true,
+      trim: true,
     },
 
-    ownerPhone: String,
+    ownerPhone: {
+      type: String,
+      default: "",
+    },
 
-    ownerEmail: String,
+    ownerEmail: {
+      type: String,
+      default: "",
+    },
 
-    managerName: String,
+    managerName: {
+      type: String,
+      default: "",
+    },
 
-    managerPhone: String,
+    managerPhone: {
+      type: String,
+      default: "",
+    },
 
     // =====================================================
-    // SERVICE DETAILS
+    // SERVICES
     // =====================================================
+
     serviceCategories: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -126,7 +162,10 @@ const companySchema = new mongoose.Schema(
           required: true,
         },
 
-        description: String,
+        description: {
+          type: String,
+          default: "",
+        },
 
         basePrice: {
           type: Number,
@@ -149,8 +188,9 @@ const companySchema = new mongoose.Schema(
     ],
 
     // =====================================================
-    // EMPLOYEES / WORKERS
+    // WORKERS
     // =====================================================
+
     workers: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -166,6 +206,7 @@ const companySchema = new mongoose.Schema(
     // =====================================================
     // LOCATION
     // =====================================================
+
     address: {
       officeNumber: String,
       street: String,
@@ -180,8 +221,8 @@ const companySchema = new mongoose.Schema(
       type: {
         type: String,
         enum: ["Point"],
-        // default: "Point",
       },
+
       coordinates: {
         type: [Number],
       },
@@ -195,6 +236,7 @@ const companySchema = new mongoose.Schema(
     // =====================================================
     // BUSINESS HOURS
     // =====================================================
+
     businessHours: {
       monday: {
         isOpen: {
@@ -263,37 +305,76 @@ const companySchema = new mongoose.Schema(
     // =====================================================
     // DOCUMENTS & VERIFICATION
     // =====================================================
-    gstNumber: String,
 
-    panNumber: String,
+    gstNumber: {
+      type: String,
+      default: "",
+    },
 
-    cinNumber: String,
+    panNumber: {
+      type: String,
+      default: "",
+    },
 
-    businessRegistrationNumber: String,
+    cinNumber: {
+      type: String,
+      default: "",
+    },
 
-    gstCertificate: String,
+    businessRegistrationNumber: {
+      type: String,
+      default: "",
+    },
 
-    businessLicense: String,
+    gstCertificate: {
+      type: String,
+      default: "",
+    },
 
-    insuranceDocument: String,
+    businessLicense: {
+      type: String,
+      default: "",
+    },
 
-    ownerIdProof: String,
+    insuranceDocument: {
+      type: String,
+      default: "",
+    },
 
-    companyPhotos: [String],
+    ownerIdProof: {
+      type: String,
+      default: "",
+    },
+
+    companyPhotos: [
+      {
+        type: String,
+      },
+    ],
 
     verificationStatus: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: [
+        "pending",
+        "approved",
+        "rejected",
+      ],
       default: "pending",
     },
 
-    rejectionReason: String,
+    rejectionReason: {
+      type: String,
+      default: "",
+    },
 
-    verifiedAt: Date,
+    verifiedAt: {
+      type: Date,
+    },
 
     // =====================================================
-    // RATINGS & ANALYTICS
+    // RATINGS
     // =====================================================
+
     averageRating: {
       type: Number,
       default: 0,
@@ -334,6 +415,7 @@ const companySchema = new mongoose.Schema(
     // =====================================================
     // FINANCIAL
     // =====================================================
+
     walletBalance: {
       type: Number,
       default: 0,
@@ -363,11 +445,17 @@ const companySchema = new mongoose.Schema(
     },
 
     // =====================================================
-    // SUBSCRIPTION SYSTEM
+    // SUBSCRIPTION
     // =====================================================
+
     subscriptionPlan: {
       type: String,
-      enum: ["free", "basic", "premium", "enterprise"],
+      enum: [
+        "free",
+        "basic",
+        "premium",
+        "enterprise",
+      ],
       default: "free",
     },
 
@@ -383,6 +471,7 @@ const companySchema = new mongoose.Schema(
     // =====================================================
     // PORTFOLIO
     // =====================================================
+
     portfolioImages: [String],
 
     completedProjectImages: [String],
@@ -397,6 +486,7 @@ const companySchema = new mongoose.Schema(
     // =====================================================
     // NOTIFICATIONS
     // =====================================================
+
     deviceTokens: [String],
 
     notificationPreferences: {
@@ -419,12 +509,16 @@ const companySchema = new mongoose.Schema(
     // =====================================================
     // ACCOUNT STATUS
     // =====================================================
+
     isBlocked: {
       type: Boolean,
       default: false,
     },
 
-    blockedReason: String,
+    blockedReason: {
+      type: String,
+      default: "",
+    },
 
     isDeleted: {
       type: Boolean,
@@ -437,6 +531,7 @@ const companySchema = new mongoose.Schema(
     },
 
     lastSeenAt: Date,
+
   },
   {
     timestamps: true,
@@ -447,16 +542,15 @@ const companySchema = new mongoose.Schema(
 // INDEXES
 // =====================================================
 
-// GEO SEARCH
-companySchema.index({ location: "2dsphere" });
+companySchema.index({
+  location: "2dsphere",
+});
 
-// TEXT SEARCH
 companySchema.index({
   companyName: "text",
   description: "text",
 });
 
-// FILTERING
 companySchema.index({
   averageRating: -1,
   verificationStatus: 1,
@@ -466,6 +560,9 @@ companySchema.index({
 // MODEL
 // =====================================================
 
-const Company = mongoose.model("Company", companySchema);
+const Company = mongoose.model(
+  "Company",
+  companySchema
+);
 
 module.exports = Company;

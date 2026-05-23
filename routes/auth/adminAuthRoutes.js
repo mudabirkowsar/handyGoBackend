@@ -5,10 +5,12 @@ const express = require("express");
 const router = express.Router();
 
 const {
-    // registerAdmin,
+    registerAdmin,
     loginAdmin,
 } = require("../../controllers/auth/adminAuthController");
 
 router.post("/login", loginAdmin);
+
+router.post("/register", registerAdmin);
 
 module.exports = router;

@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const User = require("../../models/User");
+const Provider = require("../../models/Provider");
 
 
 // ==========================================
@@ -77,70 +78,191 @@ const registerUser = async (req, res) => {
 // LOGIN USER
 // ==========================================
 
+// ==========================================
+// LOGIN USER / PROVIDER
+// ==========================================
+
 const loginUser = async (req, res) => {
     try {
         const { identifier, password } = req.body;
 
-        // 1. Validation
+        // ==========================================
+        // VALIDATION
+        // ==========================================
+
         if (!identifier || !password) {
-            return res.status(400).json({ success: false, message: "Provide credentials" });
+            return res.status(400).json({
+                success: false,
+                message: "Provide credentials",
+            });
         }
 
-        // 2. Find User
-        const user = await User.findOne({
+        const cleanIdentifier =
+            identifier.toLowerCase().trim();
+
+        let account = null;
+        let Model = null;
+        let accountType = null;
+
+        // ==========================================
+        // SEARCH USER
+        // ==========================================
+
+        account = await User.findOne({
             $or: [
-                { email: identifier.toLowerCase().trim() },
-                { phone: identifier.trim() }
+                { email: cleanIdentifier },
+                { phone: identifier.trim() },
             ],
         }).select("+password tokens");
 
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(400).json({ success: false, message: "Invalid credentials" });
+        if (account) {
+            Model = User;
+            accountType = "customer";
         }
 
-        let token;
-        const isSingleSession = process.env.SINGLE_SESSION_ONLY === 'true';
+        // ==========================================
+        // SEARCH PROVIDER
+        // ==========================================
 
-        // 3. Logic: Check if we should reuse an existing token
-        if (isSingleSession && user.tokens && user.tokens.length > 0) {
-            // Grab the last issued token
-            token = user.tokens[user.tokens.length - 1].token;
+        if (!account) {
+            account = await Provider.findOne({
+                $or: [
+                    { email: cleanIdentifier },
+                    { phone: identifier.trim() },
+                ],
+            }).select("+password tokens");
 
-            // Verify if the existing token is still active and valid
-            try {
-                jwt.verify(token, process.env.JWT_SECRET);
-            } catch (err) {
-                // Token expired or secret changed: generate a fresh one
-                token = generateToken(user._id, user.role);
-                await User.findByIdAndUpdate(user._id, {
-                    $set: { tokens: [{ token }] }
-                });
+            if (account) {
+                Model = Provider;
+                accountType = "provider";
             }
-        } else {
-            // 4. Multi-session/Standard Behavior: Append new session token
-            token = generateToken(user._id, user.role);
-            await User.findByIdAndUpdate(user._id, {
-                $push: {
-                    tokens: {
-                        $each: [{ token }],
-                        $slice: -5
-                    }
-                }
+        }
+
+        // ==========================================
+        // ACCOUNT NOT FOUND
+        // ==========================================
+
+        if (!account) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid credentials",
             });
         }
+
+        // ==========================================
+        // PASSWORD CHECK
+        // ==========================================
+
+        const isMatch = await bcrypt.compare(
+            password,
+            account.password
+        );
+
+        if (!isMatch) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid credentials",
+            });
+        }
+
+        // ==========================================
+        // FORCE CORRECT ROLE
+        // ==========================================
+
+        const role =
+            accountType === "provider"
+                ? "provider"
+                : "customer";
+
+        let token;
+
+        const isSingleSession =
+            process.env.SINGLE_SESSION_ONLY === "true";
+
+        // ==========================================
+        // SINGLE SESSION
+        // ==========================================
+
+        if (
+            isSingleSession &&
+            account.tokens &&
+            account.tokens.length > 0
+        ) {
+            token =
+                account.tokens[
+                    account.tokens.length - 1
+                ].token;
+
+            try {
+                jwt.verify(
+                    token,
+                    process.env.JWT_SECRET
+                );
+            } catch (err) {
+                token = generateToken(
+                    account._id,
+                    role
+                );
+
+                await Model.findByIdAndUpdate(
+                    account._id,
+                    {
+                        $set: {
+                            tokens: [{ token }],
+                        },
+                    }
+                );
+            }
+        } else {
+
+            // ==========================================
+            // MULTI SESSION
+            // ==========================================
+
+            token = generateToken(
+                account._id,
+                role
+            );
+
+            await Model.findByIdAndUpdate(
+                account._id,
+                {
+                    $push: {
+                        tokens: {
+                            $each: [{ token }],
+                            $slice: -5,
+                        },
+                    },
+                }
+            );
+        }
+
+        // ==========================================
+        // RESPONSE
+        // ==========================================
 
         res.status(200).json({
             success: true,
             message: "Login successful",
-            token: token,
+            token,
+
             user: {
-                _id: user._id,
-                email: user.email,
-                role: user.role
+                _id: account._id,
+                fullName: account.fullName,
+                email: account.email,
+                phone: account.phone,
+                role: role,
+                accountType: accountType,
+                profileImage:
+                    account.profileImage || "",
             },
         });
+
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
     }
 };
 

@@ -178,7 +178,7 @@ const providerSchema = new mongoose.Schema(
     availabilityStatus: {
       type: String,
       enum: ["available", "busy", "offline"],
-      default: "offline",
+      default: "available",
     },
 
     workingHours: {

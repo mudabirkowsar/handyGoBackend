@@ -16,6 +16,9 @@ const {
     getAllProviders,
     getSingleProvider,
     getNearbyProviders,
+    getWorkingHours,
+    updateWorkingHours,
+    toggleDayAvailability
 } = require("../../controllers/provider/providerController");
 
 const {protect} = require("../../middlewares/authMiddleware");
@@ -99,5 +102,11 @@ router.get(
     "/:providerId",
     getSingleProvider
 );
+
+router.route("/working-hours")
+  .get(getWorkingHours)
+  .put(updateWorkingHours);
+
+router.patch("/working-hours/toggle-day", toggleDayAvailability);
 
 module.exports = router;
