@@ -1,28 +1,33 @@
-// routes/auth/providerAuthRoutes.js
-
 const express = require("express");
-
 const router = express.Router();
-const {protect} = require("../../middlewares/authMiddleware");
-
-const upload = require("../../middlewares/uploadMiddleware");
 const {
     registerProvider,
-    loginProvider
+    loginProvider,
+    uploadProviderDocuments,
+    updateProviderProfile
 } = require("../../controllers/auth/providerAuthController");
 
+// Middlewares (Assuming you have these)
+const { protect, isProvider } = require("../../middlewares/authMiddleware"); 
+const upload = require("../../middlewares/uploadMiddleware");
+
+// Public Routes
 router.post("/register", registerProvider);
-
 router.post("/login", loginProvider);
-// router.put(
-//     "/update-profile", protect,
-//     upload.fields([
-//         { name: "profileImage", maxCount: 1 },
-//         { name: "portfolioImages", maxCount: 10 }
-//     ]),
-//     updateProviderProfile
-// );
 
-// router.get("/me", protect, getMyProfile);
+// Protected Routes (Require Token)
+router.post(
+    "/upload-documents",
+    protect,
+    isProvider,
+    upload.fields([
+        { name: 'aadhaarFrontImage', maxCount: 1 },
+        { name: 'aadhaarBackImage', maxCount: 1 },
+        { name: 'selfieImage', maxCount: 1 }
+    ]),
+    uploadProviderDocuments
+);
+
+router.put("/update-profile", protect, isProvider, updateProviderProfile);
 
 module.exports = router;

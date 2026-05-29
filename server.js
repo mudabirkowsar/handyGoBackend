@@ -53,7 +53,7 @@ app.get('/', (req, res) => {
         message: "Server is running!",
         access_from_mobile: `http://${getLocalIp()}:${PORT}`
     });
-});
+}); 
 
 app.use("/user-auth", require("./routes/auth/userAuthRoutes"));
 app.use("/user-detail", userRoutes);
@@ -68,6 +68,7 @@ app.use("/companies", companyRoutes);
 app.use("/workers", workerRoutes);
 
 app.use("/admin", require("./routes/admin/companyRoutes")); 
+app.use("/admin-provider", require("./routes/admin/adminProviderRoutes"));
 
 // --- Error Handling ---
 app.use((err, req, res, next) => {

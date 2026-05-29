@@ -1,187 +1,244 @@
-// controllers/auth/providerAuthController.js
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-
 const Provider = require("../../models/Provider");
 
+// ==========================================
+// GENERATE TOKEN
+// ==========================================
 const generateToken = (id, role) => {
     return jwt.sign(
         { id, role },
         process.env.JWT_SECRET,
-        {
-            expiresIn: "30d",
-        }
+        { expiresIn: "30d" }
     );
 };
 
+// ==========================================
+// REGISTER PROVIDER (Initial Step)
+// ==========================================
 const registerProvider = async (req, res) => {
     try {
-        const {
-            fullName,
-            phone,
-            email,
-            password,
-            serviceCategory, // Added this
-            lat,             // Added this
-            lng              // Added this
-        } = req.body;
+        const { fullName, phone, password, serviceProvided, email } = req.body;
 
-        // Basic check for coordinates since they are required by your model
-        if (!lat || !lng) {
+        // 1. Validate required fields
+        if (!fullName || !phone || !password || !serviceProvided) {
             return res.status(400).json({
                 success: false,
-                message: "Location coordinates (lat, lng) are required",
+                message: "Please provide all required fields",
             });
         }
 
+        // 2. Check if provider already exists
         const existingProvider = await Provider.findOne({ phone });
-
         if (existingProvider) {
             return res.status(400).json({
                 success: false,
-                message: "Provider already exists",
+                message: "Provider with this phone number already exists",
             });
         }
 
+        // 3. Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const provider = await Provider.create({
+        // 4. Create document 
+        const provider = new Provider({
+            role: "provider",
             fullName,
             phone,
-            email,
+            email: email ? email.toLowerCase().trim() : undefined,
             password: hashedPassword,
-            role: "provider",
-            serviceCategory, // Pass the ID from req.body
+            serviceProvided,
+            verificationStatus: "incomplete",
+            // FIX: Provide default coordinates to satisfy the 2dsphere index
             location: {
                 type: "Point",
-                coordinates: [parseFloat(lng), parseFloat(lat)], // [longitude, latitude]
-            },
+                coordinates: [0, 0] // [longitude, latitude] - Default to 0,0
+            }
         });
+
+        // 5. Generate token (assuming you have this function)
+        const token = generateToken(provider._id, "provider");
+
+        // 6. Save
+        await provider.save();
 
         res.status(201).json({
             success: true,
-            message: "Provider registered successfully",
-            token: generateToken(provider._id, provider.role),
-            provider,
+            message: "Registration successful. Please upload documents for verification.",
+            token,
+            provider: {
+                _id: provider._id,
+                fullName: provider.fullName,
+                phone: provider.phone,
+                role: provider.role,
+                verificationStatus: provider.verificationStatus,
+            },
         });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message,
-        });
-    }
-};
-
-const loginProvider = async (
-    req,
-    res
-) => {
-    try {
-        const { phone, password } = req.body;
-
-        const provider = await Provider.findOne({
-            phone,
-        }).select("+password");
-
-        if (!provider) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid credentials",
-            });
-        }
-
-        const isMatch = await bcrypt.compare(
-            password,
-            provider.password
-        );
-
-        if (!isMatch) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid credentials",
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            message: "Login successful",
-            token: generateToken(
-                provider._id,
-                provider.role
-            ),
-            provider,
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message,
-        });
-    }
-};
-
-const updateProviderProfile = async (req, res) => {
-    try {
-        const providerId = req.user.id; // From authMiddleware
-        const updates = req.body;
-
-        // 1. Handle File Uploads (Cloudinary)
-        if (req.files) {
-            // Profile Image
-            if (req.files.profileImage) {
-                updates.profileImage = req.files.profileImage[0].path;
-            }
-            // Portfolio Images (Multiple)
-            if (req.files.portfolioImages) {
-                const portfolioUrls = req.files.portfolioImages.map(file => file.path);
-                // Use $push if you want to add to existing, or just replace
-                updates.portfolioImages = portfolioUrls;
-            }
-        }
-
-        // 2. Handle Location (Parsing coordinates if sent as string)
-        if (updates.lng && updates.lat) {
-            updates.location = {
-                type: "Point",
-                coordinates: [parseFloat(updates.lng), parseFloat(updates.lat)],
-            };
-        }
-
-        // 3. Handle Nested Objects (Working Hours / Services)
-        // Note: If you send workingHours or services as JSON strings from frontend, 
-        // you must JSON.parse(updates.workingHours) here.
-        if (typeof updates.workingHours === 'string') {
-            updates.workingHours = JSON.parse(updates.workingHours);
-        }
-        if (typeof updates.services === 'string') {
-            updates.services = JSON.parse(updates.services);
-        }
-
-        const updatedProvider = await Provider.findByIdAndUpdate(
-            providerId,
-            { $set: updates },
-            { new: true, runValidators: true }
-        ).populate("serviceCategory");
-
-        if (!updatedProvider) {
-            return res.status(404).json({ success: false, message: "Provider not found" });
-        }
-
-        res.status(200).json({
-            success: true,
-            message: "Profile updated successfully for public view",
-            data: updatedProvider,
-        });
-    } catch (error) {
+        console.error("Error in registerProvider:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// Get current provider profile (Private)
-const getMyProfile = async (req, res) => {
+// ==========================================
+// LOGIN PROVIDER
+// ==========================================
+const loginProvider = async (req, res) => {
     try {
-        const provider = await Provider.findById(req.user.id).populate("serviceCategory");
-        res.status(200).json({ success: true, data: provider });
+        // Change 'phone' to 'identifier' to represent either Email or Phone
+        const { identifier, password } = req.body;
+
+        if (!identifier || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide email/phone and password"
+            });
+        }
+
+        // Clean the input: trim spaces and lowercase for email matching
+        const cleanIdentifier = identifier.toLowerCase().trim();
+
+        // Find provider where email matches OR phone matches
+        const provider = await Provider.findOne({
+            $or: [
+                { email: cleanIdentifier },
+                { phone: identifier.trim() }
+            ]
+        }).select("+password +tokens");
+
+        // 1. Check if provider exists
+        if (!provider) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid credentials"
+            });
+        }
+
+        // 2. Check if password is correct
+        const isMatch = await bcrypt.compare(password, provider.password);
+        if (!isMatch) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid credentials"
+            });
+        }
+
+        // 3. Check if account is blocked
+        if (provider.isBlocked) {
+            return res.status(403).json({
+                success: false,
+                message: "Account is blocked. Contact support."
+            });
+        }
+
+        // 4. Generate Token
+        const token = generateToken(provider._id, "provider");
+
+        // 5. Store token (Ensure your schema has a tokens array)
+        if (!provider.tokens) provider.tokens = [];
+        provider.tokens.push({ token });
+
+        // Limit stored sessions (optional, keeps DB clean)
+        if (provider.tokens.length > 5) provider.tokens.shift();
+
+        await provider.save();
+
+        // 6. Final Response
+        res.status(200).json({
+            success: true,
+            message: "Login successful",
+            token,
+            provider: {
+                _id: provider._id,
+                fullName: provider.fullName,
+                email: provider.email,
+                phone: provider.phone,
+                role: provider.role,
+                verificationStatus: provider.verificationStatus,
+                profileImage: provider.profileImage || "",
+            },
+        });
+
     } catch (error) {
+        console.error("Error in loginProvider:", error);
+        res.status(500).json({
+            success: false,
+            message: "Server Error: " + error.message
+        });
+    }
+};
+
+// ==========================================
+// SUBMIT DOCUMENTS (Moves status to Pending)
+// ==========================================
+const uploadProviderDocuments = async (req, res) => {
+    try {
+        const providerId = req.user._id; // Set by Auth Middleware
+        const provider = await Provider.findById(providerId);
+
+        if (!provider) {
+            return res.status(404).json({ success: false, message: "Provider not found" });
+        }
+
+        const { aadhaarNumber, panNumber } = req.body;
+
+        if (aadhaarNumber) provider.aadhaarNumber = aadhaarNumber;
+        if (panNumber) provider.panNumber = panNumber;
+
+        // Handle File uploads via Multer
+        if (req.files) {
+            if (req.files['aadhaarFrontImage']) provider.aadhaarFrontImage = req.files['aadhaarFrontImage'][0].path;
+            if (req.files['aadhaarBackImage']) provider.aadhaarBackImage = req.files['aadhaarBackImage'][0].path;
+            if (req.files['selfieImage']) provider.selfieImage = req.files['selfieImage'][0].path;
+        }
+
+        provider.verificationStatus = "pending"; // Now wait for admin
+        await provider.save();
+
+        res.status(200).json({
+            success: true,
+            message: "Documents uploaded. Verification is now pending admin review.",
+            verificationStatus: provider.verificationStatus
+        });
+    } catch (error) {
+        console.error("Error in uploadProviderDocuments:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// ==========================================
+// UPDATE PROFILE (Only if Approved)
+// ==========================================
+const updateProviderProfile = async (req, res) => {
+    try {
+        const providerId = req.user.id;
+        const currentProvider = await Provider.findById(providerId);
+
+        if (!currentProvider) {
+            return res.status(404).json({ success: false, message: "Provider not found" });
+        }
+
+        // Logic check: only allow if approved
+        if (currentProvider.verificationStatus !== "approved") {
+            return res.status(403).json({
+                success: false,
+                message: `Action denied. Account is ${currentProvider.verificationStatus}.`,
+            });
+        }
+
+        const updatedProvider = await Provider.findByIdAndUpdate(
+            providerId,
+            { $set: req.body },
+            { new: true, runValidators: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: "Profile updated successfully",
+            provider: updatedProvider,
+        });
+    } catch (error) {
+        console.error("Error in updateProviderProfile:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -189,6 +246,6 @@ const getMyProfile = async (req, res) => {
 module.exports = {
     registerProvider,
     loginProvider,
-    updateProviderProfile,
-    getMyProfile
+    uploadProviderDocuments,
+    updateProviderProfile
 };

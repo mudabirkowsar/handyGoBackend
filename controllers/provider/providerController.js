@@ -384,7 +384,6 @@ const getMyProfile = async (req, res) => {
         const provider = await Provider.findById(
             req.user.id
         )
-            .populate("serviceCategory")
             .select("-password");
 
         if (!provider) {
@@ -420,7 +419,6 @@ const getAllProviders = async (req, res) => {
             isDeleted: false,
             verificationStatus: "approved",
         })
-            .populate("serviceCategory")
             .select("-password");
 
         res.status(200).json({
@@ -448,7 +446,6 @@ const getSingleProvider = async (req, res) => {
         const provider = await Provider.findById(
             req.params.providerId
         )
-            .populate("serviceCategory")
             .select("-password");
 
         if (!provider) {
@@ -507,7 +504,6 @@ const getNearbyProviders = async (req, res) => {
 
             isDeleted: false,
         })
-            .populate("serviceCategory")
             .select("-password");
 
         res.status(200).json({

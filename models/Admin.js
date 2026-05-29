@@ -77,6 +77,14 @@ const adminSchema = new mongoose.Schema(
             default: "",
             select: false,
         },
+        tokens: [
+            {
+                token: {
+                    type: String,
+                    required: true,
+                },
+            },
+        ],
 
         // =========================================
         // NOTIFICATIONS

@@ -86,78 +86,35 @@ const loginUser = async (req, res) => {
     try {
         const { identifier, password } = req.body;
 
-        // ==========================================
-        // VALIDATION
-        // ==========================================
-
+        // 1. Validate input
         if (!identifier || !password) {
             return res.status(400).json({
                 success: false,
-                message: "Provide credentials",
+                message: "Please provide email/phone and password",
             });
         }
 
-        const cleanIdentifier =
-            identifier.toLowerCase().trim();
+        const cleanEmail = identifier.toLowerCase().trim();
+        const cleanPhone = identifier.trim();
 
-        let account = null;
-        let Model = null;
-        let accountType = null;
-
-        // ==========================================
-        // SEARCH USER
-        // ==========================================
-
-        account = await User.findOne({
+        // 2. Find User by Email OR Phone
+        const user = await User.findOne({
             $or: [
-                { email: cleanIdentifier },
-                { phone: identifier.trim() },
+                { email: cleanEmail },
+                { phone: cleanPhone },
             ],
         }).select("+password tokens");
 
-        if (account) {
-            Model = User;
-            accountType = "customer";
-        }
-
-        // ==========================================
-        // SEARCH PROVIDER
-        // ==========================================
-
-        if (!account) {
-            account = await Provider.findOne({
-                $or: [
-                    { email: cleanIdentifier },
-                    { phone: identifier.trim() },
-                ],
-            }).select("+password tokens");
-
-            if (account) {
-                Model = Provider;
-                accountType = "provider";
-            }
-        }
-
-        // ==========================================
-        // ACCOUNT NOT FOUND
-        // ==========================================
-
-        if (!account) {
+        // 3. Check if user exists
+        if (!user) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid credentials",
             });
         }
 
-        // ==========================================
-        // PASSWORD CHECK
-        // ==========================================
-
-        const isMatch = await bcrypt.compare(
-            password,
-            account.password
-        );
-
+        // 4. Check password
+        const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({
                 success: false,
@@ -165,103 +122,48 @@ const loginUser = async (req, res) => {
             });
         }
 
-        // ==========================================
-        // FORCE CORRECT ROLE
-        // ==========================================
+        // 5. Token Generation
+        const token = generateToken(user._id, "customer");
 
-        const role =
-            accountType === "provider"
-                ? "provider"
-                : "customer";
+        // 6. Session / Token Management
+        const isSingleSession = process.env.SINGLE_SESSION_ONLY === "true";
 
-        let token;
-
-        const isSingleSession =
-            process.env.SINGLE_SESSION_ONLY === "true";
-
-        // ==========================================
-        // SINGLE SESSION
-        // ==========================================
-
-        if (
-            isSingleSession &&
-            account.tokens &&
-            account.tokens.length > 0
-        ) {
-            token =
-                account.tokens[
-                    account.tokens.length - 1
-                ].token;
-
-            try {
-                jwt.verify(
-                    token,
-                    process.env.JWT_SECRET
-                );
-            } catch (err) {
-                token = generateToken(
-                    account._id,
-                    role
-                );
-
-                await Model.findByIdAndUpdate(
-                    account._id,
-                    {
-                        $set: {
-                            tokens: [{ token }],
-                        },
-                    }
-                );
-            }
+        if (isSingleSession) {
+            // Only allow one active token
+            user.tokens = [{ token }];
         } else {
-
-            // ==========================================
-            // MULTI SESSION
-            // ==========================================
-
-            token = generateToken(
-                account._id,
-                role
-            );
-
-            await Model.findByIdAndUpdate(
-                account._id,
-                {
-                    $push: {
-                        tokens: {
-                            $each: [{ token }],
-                            $slice: -5,
-                        },
-                    },
-                }
-            );
+            // Keep the last 5 tokens/sessions
+            if (!user.tokens) user.tokens = [];
+            user.tokens.push({ token });
+            if (user.tokens.length > 5) {
+                user.tokens = user.tokens.slice(-5);
+            }
         }
 
-        // ==========================================
-        // RESPONSE
-        // ==========================================
+        // 7. Save the updated user document
+        await user.save();
 
+        // 8. Final Response
         res.status(200).json({
             success: true,
             message: "Login successful",
             token,
-
             user: {
-                _id: account._id,
-                fullName: account.fullName,
-                email: account.email,
-                phone: account.phone,
-                role: role,
-                accountType: accountType,
-                profileImage:
-                    account.profileImage || "",
+                _id: user._id,
+                fullName: user.fullName,
+                email: user.email,
+                phone: user.phone,
+                role: "customer",
+                profileImage: user.profileImage || "",
             },
         });
 
     } catch (error) {
+        console.error("User Login Error:", error);
         res.status(500).json({
             success: false,
-            message: error.message,
+            message: "Server Error",
+            error: error.message
         });
     }
 };

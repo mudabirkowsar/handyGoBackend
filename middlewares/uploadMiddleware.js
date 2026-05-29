@@ -7,7 +7,7 @@ const storage = new CloudinaryStorage({
     params: {
         folder: "handygo-documents",
         resource_type: "auto",
-        allowed_formats: ["jpg", "jpeg", "png", "pdf"],
+        allowed_formats: ["jpg", "jpeg", "png", "pdf", "gif"],
         // Remove spaces and special chars from filename
         public_id: (req, file) => {
             const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

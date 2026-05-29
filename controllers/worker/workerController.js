@@ -3,75 +3,95 @@
 const Worker = require("../../models/Worker");
 const Company = require("../../models/Company");
 
-// =====================================================
+
+// ==========================================
 // CREATE WORKER
-// =====================================================
+// ==========================================
 const createWorker = async (req, res) => {
     try {
-
-        const company =
-            await Company.findById(
-                req.user.id
-            );
-
-        if (!company) {
-            return res.status(404).json({
-                success: false,
-                message: "Company not found",
-            });
-        }
 
         const {
             fullName,
             phone,
             email,
+            employeeId,
             designation,
-            serviceCategory,
             skills,
             experienceYears,
-            hourlyRate,
+            address,
+            serviceProvided,
         } = req.body;
 
-        const existingWorker =
-            await Worker.findOne({
-                phone,
-            });
+        // ==========================================
+        // CHECK EXISTING WORKER
+        // ==========================================
+        const existingWorker = await Worker.findOne({ phone });
 
         if (existingWorker) {
             return res.status(400).json({
                 success: false,
-                message:
-                    "Worker already exists",
+                message: "Worker already exists with this phone number",
             });
         }
 
-        const worker =
-            await Worker.create({
-                fullName,
-                phone,
-                email,
-                designation,
-                serviceCategory,
-                skills,
-                experienceYears,
-                hourlyRate,
-                companyId: company._id,
-                profileImage: req.file
-                    ? req.file.path
-                    : "",
-            });
+        // ==========================================
+        // COMPANY ID FROM TOKEN
+        // ==========================================
+        const companyId = req.user._id;
 
-        company.workers.push(worker._id);
+        // ==========================================
+        // PROFILE IMAGE
+        // ==========================================
+        let profileImage = "";
 
-        company.totalWorkers =
-            company.workers.length;
+        if (req.files?.profileImage) {
+            profileImage = req.files.profileImage[0].path;
+        }
 
-        await company.save();
+        // ==========================================
+        // CREATE WORKER
+        // ==========================================
+        const worker = await Worker.create({
+            fullName,
+            phone,
+            email,
+            profileImage,
+            companyId,
+            employeeId,
+            designation,
+            serviceProvided,
+            skills: skills
+                ? JSON.parse(skills)
+                : [],
+            experienceYears,
+            address: address
+                ? JSON.parse(address)
+                : {},
+        });
 
+        // ==========================================
+        // ADD WORKER ID TO COMPANY
+        // ==========================================
+        await Company.findByIdAndUpdate(
+            companyId,
+            {
+                $push: {
+                    workers: worker._id,
+                },
+
+                $inc: {
+                    totalWorkers: 1,
+                },
+            },
+            { new: true }
+        );
+
+        // ==========================================
+        // RESPONSE
+        // ==========================================
         res.status(201).json({
             success: true,
-            message:
-                "Worker created successfully",
+            message: "Worker created successfully",
             worker,
         });
 
@@ -85,48 +105,48 @@ const createWorker = async (req, res) => {
     }
 };
 
-// =====================================================
-// GET COMPANY WORKERS
-// =====================================================
+
+
+
+// ==========================================
+// GET ALL COMPANY WORKERS
+// ==========================================
 const getCompanyWorkers = async (req, res) => {
     try {
 
-        const workers =
-            await Worker.find({
-                companyId: req.user.id,
-            }).populate(
-                "serviceCategory"
-            );
+        const companyId = req.user._id;
+
+        const workers = await Worker.find({ companyId })
+            .sort({ createdAt: -1 });
 
         res.status(200).json({
             success: true,
-            totalWorkers:
-                workers.length,
+            totalWorkers: workers.length,
             workers,
         });
 
     } catch (error) {
-
         res.status(500).json({
             success: false,
             message: error.message,
         });
-
     }
 };
 
-// =====================================================
+
+
+// ==========================================
 // GET SINGLE WORKER
-// =====================================================
+// ==========================================
 const getSingleWorker = async (req, res) => {
     try {
 
-        const worker =
-            await Worker.findById(
-                req.params.workerId
-            ).populate(
-                "serviceCategory"
-            );
+        const { workerId } = req.params;
+
+        const worker = await Worker.findOne({
+            _id: workerId,
+            companyId: req.user._id,
+        });
 
         if (!worker) {
             return res.status(404).json({
@@ -141,25 +161,27 @@ const getSingleWorker = async (req, res) => {
         });
 
     } catch (error) {
-
         res.status(500).json({
             success: false,
             message: error.message,
         });
-
     }
 };
 
-// =====================================================
+
+
+// ==========================================
 // UPDATE WORKER
-// =====================================================
+// ==========================================
 const updateWorker = async (req, res) => {
     try {
 
-        const worker =
-            await Worker.findById(
-                req.params.workerId
-            );
+        const { workerId } = req.params;
+
+        const worker = await Worker.findOne({
+            _id: workerId,
+            companyId: req.user._id,
+        });
 
         if (!worker) {
             return res.status(404).json({
@@ -168,69 +190,56 @@ const updateWorker = async (req, res) => {
             });
         }
 
-        worker.fullName =
-            req.body.fullName ||
-            worker.fullName;
+        // PROFILE IMAGE
+        if (req.files?.profileImage) {
+            worker.profileImage = req.files.profileImage[0].path;
+        }
 
-        worker.designation =
-            req.body.designation ||
-            worker.designation;
-
-        worker.skills =
-            req.body.skills ||
-            worker.skills;
-
-        worker.hourlyRate =
-            req.body.hourlyRate ||
-            worker.hourlyRate;
-
+        // UPDATE FIELDS
+        worker.fullName = req.body.fullName || worker.fullName;
+        worker.phone = req.body.phone || worker.phone;
+        worker.email = req.body.email || worker.email;
+        worker.employeeId = req.body.employeeId || worker.employeeId;
+        worker.designation = req.body.designation || worker.designation;
+        worker.skills = req.body.skills || worker.skills;
         worker.experienceYears =
-            req.body.experienceYears ||
-            worker.experienceYears;
+            req.body.experienceYears || worker.experienceYears;
 
-        worker.availabilityStatus =
-            req.body
-                .availabilityStatus ||
-            worker.availabilityStatus;
-
-        worker.isOnline =
-            req.body.isOnline ??
-            worker.isOnline;
-
-        if (req.file) {
-            worker.profileImage =
-                req.file.path;
+        // ADDRESS
+        if (req.body.address) {
+            worker.address = JSON.parse(req.body.address);
         }
 
         await worker.save();
 
         res.status(200).json({
             success: true,
-            message:
-                "Worker updated successfully",
+            message: "Worker updated successfully",
             worker,
         });
 
     } catch (error) {
-
         res.status(500).json({
             success: false,
             message: error.message,
         });
-
     }
 };
 
-// =====================================================
-// DELETE WORKER
-// =====================================================
-const deleteWorker = async (req, res) => {
+
+
+// ==========================================
+// TOGGLE STATUS
+// ==========================================
+const toggleWorkerStatus = async (req, res) => {
     try {
 
-        const worker =
-            await Worker.findById(
-                req.params.workerId
-            );
+        const { workerId } = req.params;
+
+        const worker = await Worker.findOne({
+            _id: workerId,
+            companyId: req.user._id,
+        });
 
         if (!worker) {
             return res.status(404).json({
@@ -239,23 +248,68 @@ const deleteWorker = async (req, res) => {
             });
         }
 
+        worker.isActive = !worker.isActive;
+
+        await worker.save();
+
+        res.status(200).json({
+            success: true,
+            message: `Worker is now ${worker.isActive ? "Active" : "Inactive"
+                }`,
+            isActive: worker.isActive,
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+
+// ==========================================
+// DELETE WORKER
+// ==========================================
+const deleteWorker = async (req, res) => {
+    try {
+
+        const { workerId } = req.params;
+
+        const companyId = req.user._id;
+
+        const worker = await Worker.findOne({
+            _id: workerId,
+            companyId,
+        });
+
+        if (!worker) {
+            return res.status(404).json({
+                success: false,
+                message: "Worker not found",
+            });
+        }
+
+        // DELETE WORKER
+        await worker.deleteOne();
+
+        // REMOVE FROM COMPANY
         await Company.findByIdAndUpdate(
-            worker.companyId,
+            companyId,
             {
                 $pull: {
-                    workers: worker._id,
+                    workers: workerId,
+                },
+
+                $inc: {
+                    totalWorkers: -1,
                 },
             }
         );
 
-        await Worker.findByIdAndDelete(
-            worker._id
-        );
-
         res.status(200).json({
             success: true,
-            message:
-                "Worker deleted successfully",
+            message: "Worker deleted successfully",
         });
 
     } catch (error) {
@@ -273,5 +327,6 @@ module.exports = {
     getCompanyWorkers,
     getSingleWorker,
     updateWorker,
+    toggleWorkerStatus,
     deleteWorker,
 };

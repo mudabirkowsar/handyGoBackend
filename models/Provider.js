@@ -93,42 +93,12 @@ const providerSchema = new mongoose.Schema(
     // =====================================================
     // PROFESSIONAL DETAILS
     // =====================================================
-    serviceCategory: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "ServiceCategory",
+    serviceProvided: {
+      type: String,
       required: true,
     },
 
     skills: [String],
-
-    services: [
-      {
-        title: {
-          type: String,
-          required: true,
-        },
-
-        description: String,
-
-        price: {
-          type: Number,
-          required: true,
-        },
-
-        pricingType: {
-          type: String,
-          enum: ["fixed", "hourly", "inspection"],
-          default: "fixed",
-        },
-
-        estimatedDurationMinutes: Number,
-
-        isActive: {
-          type: Boolean,
-          default: true,
-        },
-      },
-    ],
 
     // =====================================================
     // LOCATION
@@ -152,7 +122,6 @@ const providerSchema = new mongoose.Schema(
 
       coordinates: {
         type: [Number], // [lng, lat]
-        // required: true,
       },
     },
 
@@ -259,13 +228,10 @@ const providerSchema = new mongoose.Schema(
 
     selfieImage: String,
 
-    policeVerificationDocument: String,
-
-    tradeLicenseDocument: String,
 
     verificationStatus: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: ["pending", "incomplete", "approved", "rejected"],
       default: "pending",
     },
 

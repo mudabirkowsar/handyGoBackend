@@ -145,49 +145,6 @@ const companySchema = new mongoose.Schema(
     },
 
     // =====================================================
-    // SERVICES
-    // =====================================================
-
-    serviceCategories: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "ServiceCategory",
-      },
-    ],
-
-    services: [
-      {
-        title: {
-          type: String,
-          required: true,
-        },
-
-        description: {
-          type: String,
-          default: "",
-        },
-
-        basePrice: {
-          type: Number,
-          required: true,
-        },
-
-        pricingType: {
-          type: String,
-          enum: ["fixed", "hourly", "inspection"],
-          default: "fixed",
-        },
-
-        estimatedDurationMinutes: Number,
-
-        isActive: {
-          type: Boolean,
-          default: true,
-        },
-      },
-    ],
-
-    // =====================================================
     // WORKERS
     // =====================================================
 
