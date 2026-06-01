@@ -1,100 +1,106 @@
-const ServiceCategory = require("../../models/ServiceCategory");
+const ServiceCategory = require("../../models/ServiceCategory"); // Adjust path if needed
 
-// @desc    Create a new category (Admin Only)
-// @route   POST /api/category
-exports.createCategory = async (req, res) => {
+// @desc    Create a new service category
+// @route   POST /api/service-categories
+const createCategory = async (req, res) => {
     try {
         const { name, description } = req.body;
 
-        // Check if category already exists
-        const exists = await ServiceCategory.findOne({ name });
-        if (exists) return res.status(400).json({ success: false, message: "Category already exists" });
-
-        const categoryData = { name, description };
-
-        // Handle File Uploads (Icon and Image)
-        if (req.files) {
-            if (req.files.icon) categoryData.icon = req.files.icon[0].path;
-            if (req.files.image) categoryData.image = req.files.image[0].path;
+        if (!name) {
+            return res.status(400).json({ message: "Category name is required." });
         }
 
-        const category = await ServiceCategory.create(categoryData);
+        // Check for duplicate names
+        const existingCategory = await ServiceCategory.findOne({ name });
+        if (existingCategory) {
+            return res.status(400).json({ message: "A category with this name already exists." });
+        }
 
-        res.status(201).json({
-            success: true,
-            data: category
-        });
+        const category = await ServiceCategory.create({ name, description });
+        res.status(201).json({ message: "Category created successfully", data: category });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ message: "Failed to create category", error: error.message });
     }
 };
 
-// @desc    Get all active categories (Public/Company/Worker)
-// @route   GET /api/category
-exports.getAllCategories = async (req, res) => {
+// @desc    Get all service categories (with optional filter for active ones)
+// @route   GET /api/service-categories
+const getAllCategories = async (req, res) => {
     try {
-        // Companies usually only need active categories
-        const filter = req.user?.role === 'admin' ? {} : { isActive: true };
+        const { activeOnly } = req.query;
+        const filter = activeOnly === "true" ? { isActive: true } : {};
 
-        const categories = await ServiceCategory.find(filter).sort("name");
-
-        res.status(200).json({
-            success: true,
-            results: categories.length,
-            data: categories
-        });
+        const categories = await ServiceCategory.find(filter).sort({ createdAt: -1 });
+        res.status(200).json({ count: categories.length, data: categories });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ message: "Failed to fetch categories", error: error.message });
     }
 };
 
-// @desc    Get single category
-// @route   GET /api/category/:id
-exports.getSingleCategory = async (req, res) => {
+// @desc    Get a single service category by ID
+// @route   GET /api/service-categories/:id
+const getCategoryById = async (req, res) => {
     try {
         const category = await ServiceCategory.findById(req.params.id);
-        if (!category) return res.status(404).json({ success: false, message: "Not found" });
-
-        res.status(200).json({ success: true, data: category });
+        if (!category) {
+            return res.status(404).json({ message: "Category not found." });
+        }
+        res.status(200).json({ data: category });
     } catch (error) {
-        res.status(400).json({ success: false, message: "Invalid ID" });
+        res.status(500).json({ message: "Failed to fetch category", error: error.message });
     }
 };
 
-// @desc    Update category (Admin Only)
-// @route   PUT /api/category/:id
-exports.updateCategory = async (req, res) => {
+// @desc    Update a service category by ID
+// @route   PUT /api/service-categories/:id
+const updateCategory = async (req, res) => {
     try {
-        let updateData = { ...req.body };
+        const { name, description, isActive } = req.body;
+        const categoryId = req.params.id;
 
-        if (req.files) {
-            if (req.files.icon) updateData.icon = req.files.icon[0].path;
-            if (req.files.image) updateData.image = req.files.image[0].path;
+        // Verify entity footprint exists
+        const category = await ServiceCategory.findById(categoryId);
+        if (!category) {
+            return res.status(404).json({ message: "Category not found." });
         }
 
-        const category = await ServiceCategory.findByIdAndUpdate(
-            req.params.id,
-            updateData,
-            { new: true, runValidators: true }
-        );
+        // Prevent collision if changing name to an existing one
+        if (name && name !== category.name) {
+            const nameCollision = await ServiceCategory.findOne({ name });
+            if (nameCollision) {
+                return res.status(400).json({ message: "Another category already uses this name." });
+            }
+        }
 
-        if (!category) return res.status(404).json({ success: false, message: "Not found" });
+        category.name = name ?? category.name;
+        category.description = description ?? category.description;
+        category.isActive = isActive ?? category.isActive;
 
-        res.status(200).json({ success: true, data: category });
+        const updatedCategory = await category.save();
+        res.status(200).json({ message: "Category updated successfully", data: updatedCategory });
     } catch (error) {
-        res.status(400).json({ success: false, message: error.message });
+        res.status(500).json({ message: "Failed to update category", error: error.message });
     }
 };
 
-// @desc    Delete category (Admin Only)
-// @route   DELETE /api/category/:id
-exports.deleteCategory = async (req, res) => {
+// @desc    Delete a service category by ID
+// @route   DELETE /api/service-categories/:id
+const deleteCategory = async (req, res) => {
     try {
         const category = await ServiceCategory.findByIdAndDelete(req.params.id);
-        if (!category) return res.status(404).json({ success: false, message: "Not found" });
-
-        res.status(200).json({ success: true, message: "Category deleted" });
+        if (!category) {
+            return res.status(404).json({ message: "Category not found." });
+        }
+        res.status(200).json({ message: "Category permanently deleted successfully." });
     } catch (error) {
-        res.status(400).json({ success: false, message: error.message });
+        res.status(500).json({ message: "Failed to delete category", error: error.message });
     }
+};
+
+module.exports = {
+    createCategory,
+    getAllCategories,
+    getCategoryById,
+    updateCategory,
+    deleteCategory
 };

@@ -6,26 +6,12 @@ const serviceCategorySchema = new mongoose.Schema(
             type: String,
             required: true,
             unique: true,
-        },
-
-        icon: {
-            type: String,
-            default: "",
+            trim: true, // Automatically cleans up accidental trailing/leading spaces
         },
 
         description: {
             type: String,
             default: "",
-        },
-
-         image: {
-            type: String,
-            default: "",
-        },
-
-        isActive: {
-            type: Boolean,
-            default: true,
         },
     },
     {

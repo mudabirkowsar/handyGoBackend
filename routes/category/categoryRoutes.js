@@ -3,39 +3,20 @@ const router = express.Router();
 const {
     createCategory,
     getAllCategories,
-    getSingleCategory,
+    getCategoryById,
     updateCategory,
     deleteCategory
 } = require("../../controllers/category/categoryController");
 
-const { protect, isAdmin } = require("../../middlewares/authMiddleware");
-const upload = require("../../middlewares/uploadMiddleware");
-
-// Apply authentication and admin guards to all routes below
-router.use(protect);
-router.use(isAdmin);
-
-// Route for listing all categories and creating a new one
+// Primary collection pipelines
 router.route("/")
-    .get(getAllCategories)
-    .post(
-        upload.fields([
-            { name: "icon", maxCount: 1 },
-            { name: "image", maxCount: 1 }
-        ]),
-        createCategory
-    );
+    .post(createCategory)
+    .get(getAllCategories);
 
-// Routes for specific category operations (Get, Update, Delete)
+// Targeted element pipelines 
 router.route("/:id")
-    .get(getSingleCategory)
-    .put(
-        upload.fields([
-            { name: "icon", maxCount: 1 },
-            { name: "image", maxCount: 1 }
-        ]),
-        updateCategory
-    )
+    .get(getCategoryById)
+    .put(updateCategory)
     .delete(deleteCategory);
 
 module.exports = router;

@@ -10,7 +10,6 @@ const adminAuthRoutes = require('./routes/auth/adminAuthRoutes');
 const providerRoutes = require("./routes/provider/providerRoutes");
 const companyRoutes = require("./routes/company/companyRoutes");
 const workerRoutes = require("./routes/worker/workerRoutes");
-const categoryRoutes = require("./routes/category/categoryRoutes");
 const userRoutes = require("./routes/user/userRoutes");
 
 dotenv.config();
@@ -62,13 +61,13 @@ app.use("/company-auth", companyAuthRoutes);
 app.use("/admin-auth", adminAuthRoutes);
 
 app.use("/providers", providerRoutes);
-app.use("/categories", categoryRoutes);
 
 app.use("/companies", companyRoutes);
 app.use("/workers", workerRoutes);
 
 app.use("/admin", require("./routes/admin/companyRoutes")); 
 app.use("/admin-provider", require("./routes/admin/ProviderRoutes"));
+app.use("/categories", require("./routes/category/categoryRoutes"));
 
 // --- Error Handling ---
 app.use((err, req, res, next) => {

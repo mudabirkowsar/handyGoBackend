@@ -38,6 +38,17 @@ const registerCompany = async (req, res) => {
             });
         }
 
+        //check if company email already exists
+        if (companyEmail) {
+            const existingEmail = await Company.findOne({ companyEmail: companyEmail.toLowerCase().trim() });
+            if (existingEmail) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Company email already exists",
+                });
+            }
+        }
+
         // 2. Check if company already exists
         const existingCompany = await Company.findOne({ companyPhone });
         if (existingCompany) {
