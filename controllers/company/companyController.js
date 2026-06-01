@@ -41,10 +41,7 @@ const getMyCompanyProfile = async (req, res) => {
 // =====================================================
 // UPDATE COMPANY PROFILE
 // =====================================================
-const updateCompanyProfile = async (
-    req,
-    res
-) => {
+const updateCompanyProfile = async (req, res) => {
     try {
 
         const company = await Company.findById(

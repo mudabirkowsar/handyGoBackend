@@ -63,6 +63,7 @@ app.use("/admin-auth", adminAuthRoutes);
 app.use("/providers", providerRoutes);
 
 app.use("/companies", companyRoutes);
+app.use("/company-hours", require("./routes/company/companyHoursRoutes"));
 app.use("/workers", workerRoutes);
 
 app.use("/admin", require("./routes/admin/companyRoutes")); 
