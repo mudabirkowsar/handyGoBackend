@@ -43,6 +43,8 @@ const companySchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       default: "",
+      unique: true,
+      sparse: true,
     },
 
     password: {
@@ -311,11 +313,7 @@ const companySchema = new mongoose.Schema(
 
     verificationStatus: {
       type: String,
-      enum: [
-        "pending",
-        "approved",
-        "rejected",
-      ],
+      enum: ["pending", "approved", "rejected",],
       default: "pending",
     },
 

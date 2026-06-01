@@ -68,7 +68,7 @@ app.use("/companies", companyRoutes);
 app.use("/workers", workerRoutes);
 
 app.use("/admin", require("./routes/admin/companyRoutes")); 
-app.use("/admin-provider", require("./routes/admin/adminProviderRoutes"));
+app.use("/admin-provider", require("./routes/admin/ProviderRoutes"));
 
 // --- Error Handling ---
 app.use((err, req, res, next) => {

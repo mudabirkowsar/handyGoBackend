@@ -409,10 +409,6 @@ providerSchema.index({
   averageRating: -1,
 });
 
-// =====================================================
-// MODEL
-// =====================================================
-
 
 const Provider = mongoose.model("Provider", providerSchema);
 
