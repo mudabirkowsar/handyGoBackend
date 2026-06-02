@@ -150,69 +150,30 @@ const providerSchema = new mongoose.Schema(
       default: "available",
     },
 
+    // Add or verify this structure inside your providerSchema:
     workingHours: {
-      monday: {
-        isAvailable: {
-          type: Boolean,
-          default: true,
-        },
-        start: String,
-        end: String,
-      },
+      monday: { isAvailable: { type: Boolean, default: true }, start: String, end: String },
+      tuesday: { isAvailable: { type: Boolean, default: true }, start: String, end: String },
+      wednesday: { isAvailable: { type: Boolean, default: true }, start: String, end: String },
+      thursday: { isAvailable: { type: Boolean, default: true }, start: String, end: String },
+      friday: { isAvailable: { type: Boolean, default: true }, start: String, end: String },
+      saturday: { isAvailable: { type: Boolean, default: true }, start: String, end: String },
+      sunday: { isAvailable: { type: Boolean, default: false }, start: String, end: String },
+    },
 
-      tuesday: {
-        isAvailable: {
-          type: Boolean,
-          default: true,
-        },
-        start: String,
-        end: String,
+    overtime: {
+      isOvertimeEnabled: {
+        type: Boolean,
+        default: false
       },
-
-      wednesday: {
-        isAvailable: {
-          type: Boolean,
-          default: true,
-        },
-        start: String,
-        end: String,
+      start: {
+        type: String, // e.g., "18:00"
+        default: ""
       },
-
-      thursday: {
-        isAvailable: {
-          type: Boolean,
-          default: true,
-        },
-        start: String,
-        end: String,
-      },
-
-      friday: {
-        isAvailable: {
-          type: Boolean,
-          default: true,
-        },
-        start: String,
-        end: String,
-      },
-
-      saturday: {
-        isAvailable: {
-          type: Boolean,
-          default: true,
-        },
-        start: String,
-        end: String,
-      },
-
-      sunday: {
-        isAvailable: {
-          type: Boolean,
-          default: false,
-        },
-        start: String,
-        end: String,
-      },
+      end: {
+        type: String, // e.g., "22:00"
+        default: ""
+      }
     },
 
     // =====================================================

@@ -5,10 +5,6 @@ const express = require("express");
 const router = express.Router();
 
 const {
-    createService,
-    getProviderServices,
-    updateService,
-    deleteService,
     updateProviderProfile,
     updateAvailabilityStatus,
     updateLocation,
@@ -16,9 +12,6 @@ const {
     getAllProviders,
     getSingleProvider,
     getNearbyProviders,
-    getWorkingHours,
-    updateWorkingHours,
-    toggleDayAvailability
 } = require("../../controllers/provider/providerController");
 
 const {protect} = require("../../middlewares/authMiddleware");
@@ -55,36 +48,6 @@ router.put(
 );
 
 // =====================================================
-// SERVICES
-// =====================================================
-
-router.post(
-    "/create-service",
-    protect,
-    upload.single("image"),
-    createService
-);
-
-router.get(
-    "/my-services",
-    protect,
-    getProviderServices
-);
-
-router.put(
-    "/update-service/:serviceId",
-    protect,
-    upload.single("image"),
-    updateService
-);
-
-router.delete(
-    "/delete-service/:serviceId",
-    protect,
-    deleteService
-);
-
-// =====================================================
 // USER SIDE
 // =====================================================
 
@@ -103,10 +66,5 @@ router.get(
     getSingleProvider
 );
 
-router.route("/working-hours")
-  .get(getWorkingHours)
-  .put(updateWorkingHours);
-
-router.patch("/working-hours/toggle-day", toggleDayAvailability);
 
 module.exports = router;

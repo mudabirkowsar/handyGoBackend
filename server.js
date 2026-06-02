@@ -61,6 +61,7 @@ app.use("/company-auth", companyAuthRoutes);
 app.use("/admin-auth", adminAuthRoutes);
 
 app.use("/providers", providerRoutes);
+app.use("/provider-hours", require("./routes/provider/providerHoursRoutes"));
 
 app.use("/companies", companyRoutes);
 app.use("/company-hours", require("./routes/company/companyHoursRoutes"));
