@@ -206,46 +206,9 @@ const uploadProviderDocuments = async (req, res) => {
     }
 };
 
-// ==========================================
-// UPDATE PROFILE (Only if Approved)
-// ==========================================
-const updateProviderProfile = async (req, res) => {
-    try {
-        const providerId = req.user.id;
-        const currentProvider = await Provider.findById(providerId);
-
-        if (!currentProvider) {
-            return res.status(404).json({ success: false, message: "Provider not found" });
-        }
-
-        // Logic check: only allow if approved
-        if (currentProvider.verificationStatus !== "approved") {
-            return res.status(403).json({
-                success: false,
-                message: `Action denied. Account is ${currentProvider.verificationStatus}.`,
-            });
-        }
-
-        const updatedProvider = await Provider.findByIdAndUpdate(
-            providerId,
-            { $set: req.body },
-            { new: true, runValidators: true }
-        );
-
-        res.status(200).json({
-            success: true,
-            message: "Profile updated successfully",
-            provider: updatedProvider,
-        });
-    } catch (error) {
-        console.error("Error in updateProviderProfile:", error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-};
 
 module.exports = {
     registerProvider,
     loginProvider,
     uploadProviderDocuments,
-    updateProviderProfile
 };
