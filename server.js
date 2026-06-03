@@ -15,7 +15,7 @@ const userRoutes = require("./routes/user/userRoutes");
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT;
 
 // --- Middleware ---
 app.use(cors());
@@ -62,6 +62,7 @@ app.use("/admin-auth", adminAuthRoutes);
 
 app.use("/providers", providerRoutes);
 app.use("/provider-hours", require("./routes/provider/providerHoursRoutes"));
+app.use("/provider-services", require("./routes/provider/providerServicesRoutes"));
 
 app.use("/companies", companyRoutes);
 app.use("/company-hours", require("./routes/company/companyHoursRoutes"));

@@ -2,6 +2,28 @@
 
 const mongoose = require("mongoose");
 
+// Sub-schema for individual services provided by the professional
+const specificServiceSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true, // e.g., "Hand Mehndi", "Foot Mehndi"
+  },
+  price: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  description: {
+    type: String,
+    trim: true,
+  },
+  durationInMins: {
+    type: Number, // Estimated time taken for this service
+    default: 60,
+  }
+});
+
 const providerSchema = new mongoose.Schema(
   {
     // =====================================================
@@ -91,11 +113,25 @@ const providerSchema = new mongoose.Schema(
     },
 
     // =====================================================
-    // PROFESSIONAL DETAILS
+    // PROFESSIONAL DETAILS & PRICING
     // =====================================================
-    serviceProvided: {
+    mainCategory: {
       type: String,
-      required: true,
+      // required: true, // e.g., "Mehndi Artist", "Electrician"
+    },
+
+    // Array of granular services with distinct pricing
+    services: [specificServiceSchema],
+
+    // General default base rates requested
+    perDayPrice: {
+      type: Number,
+      default: 0,
+    },
+
+    overtimeHourlyPrice: {
+      type: Number,
+      default: 0,
     },
 
     skills: [String],
@@ -119,7 +155,6 @@ const providerSchema = new mongoose.Schema(
         enum: ["Point"],
         default: "Point",
       },
-
       coordinates: {
         type: [Number], // [lng, lat]
       },
@@ -150,7 +185,6 @@ const providerSchema = new mongoose.Schema(
       default: "available",
     },
 
-    // Add or verify this structure inside your providerSchema:
     workingHours: {
       monday: { isAvailable: { type: Boolean, default: true }, start: String, end: String },
       tuesday: { isAvailable: { type: Boolean, default: true }, start: String, end: String },
@@ -180,15 +214,10 @@ const providerSchema = new mongoose.Schema(
     // DOCUMENT VERIFICATION
     // =====================================================
     aadhaarNumber: String,
-
     panNumber: String,
-
     aadhaarFrontImage: String,
-
     aadhaarBackImage: String,
-
     selfieImage: String,
-
 
     verificationStatus: {
       type: String,
@@ -197,7 +226,6 @@ const providerSchema = new mongoose.Schema(
     },
 
     rejectionReason: String,
-
     verifiedAt: Date,
 
     // =====================================================
@@ -292,20 +320,9 @@ const providerSchema = new mongoose.Schema(
     deviceTokens: [String],
 
     notificationPreferences: {
-      bookingAlerts: {
-        type: Boolean,
-        default: true,
-      },
-
-      marketingNotifications: {
-        type: Boolean,
-        default: true,
-      },
-
-      payoutNotifications: {
-        type: Boolean,
-        default: true,
-      },
+      bookingAlerts: { type: Boolean, default: true },
+      marketingNotifications: { type: Boolean, default: true },
+      payoutNotifications: { type: Boolean, default: true },
     },
 
     // =====================================================
@@ -354,23 +371,9 @@ const providerSchema = new mongoose.Schema(
 // =====================================================
 // INDEXES
 // =====================================================
-
-// GEO SEARCH
 providerSchema.index({ location: "2dsphere" });
-
-// FAST SEARCH
-providerSchema.index({
-  fullName: "text",
-  skills: "text",
-});
-
-// CATEGORY FILTER
-providerSchema.index({
-  serviceCategory: 1,
-  averageRating: -1,
-});
-
+providerSchema.index({ fullName: "text", skills: "text" });
+providerSchema.index({ mainCategory: 1, averageRating: -1 });
 
 const Provider = mongoose.model("Provider", providerSchema);
-
 module.exports = Provider;
