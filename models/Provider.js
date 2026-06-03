@@ -115,7 +115,7 @@ const providerSchema = new mongoose.Schema(
     // =====================================================
     // PROFESSIONAL DETAILS & PRICING
     // =====================================================
-    mainCategory: {
+    serviceProvided: {
       type: String,
       // required: true, // e.g., "Mehndi Artist", "Electrician"
     },

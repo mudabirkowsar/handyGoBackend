@@ -72,6 +72,10 @@ app.use("/admin", require("./routes/admin/companyRoutes"));
 app.use("/admin-provider", require("./routes/admin/ProviderRoutes"));
 app.use("/categories", require("./routes/category/categoryRoutes"));
 
+//user 
+app.use("/user-category", require("./routes/user/serviceCategoryRoutes"));
+app.use("/user-providers", require("./routes/user/userProviderRoutes")); // For provider listing and details
+
 // --- Error Handling ---
 app.use((err, req, res, next) => {
     console.error(err.stack);
