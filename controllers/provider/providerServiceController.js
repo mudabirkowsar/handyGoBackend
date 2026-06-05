@@ -34,10 +34,10 @@ exports.getProviderServices = async (req, res) => {
 // @access  Private (Provider Only)
 exports.addService = async (req, res) => {
   try {
-    const { name, price, description, durationInMins } = req.body;
+    const { name, description } = req.body;
 
-    if (!name || !price) {
-      return res.status(400).json({ success: false, message: "Name and Price are required" });
+    if (!name) {
+      return res.status(400).json({ success: false, message: "Name is required" });
     }
 
     const provider = await Provider.findById(req.user.id);
@@ -46,7 +46,7 @@ exports.addService = async (req, res) => {
     }
 
     // Push new service object into subdocument array
-    provider.services.push({ name, price, description, durationInMins });
+    provider.services.push({ name, description });
     await provider.save();
 
     res.status(201).json({
