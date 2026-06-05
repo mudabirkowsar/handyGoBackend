@@ -75,6 +75,7 @@ app.use("/categories", require("./routes/category/categoryRoutes"));
 //user 
 app.use("/user-category", require("./routes/user/serviceCategoryRoutes"));
 app.use("/user-providers", require("./routes/user/userProviderRoutes")); // For provider listing and details
+app.use("/user-addresses", require("./routes/user/addressRoutes")); // For managing user addresses
 
 // --- Error Handling ---
 app.use((err, req, res, next) => {

@@ -93,26 +93,22 @@ const userSchema = new mongoose.Schema(
         },
 
         // =====================================================
-        // LOCATION
+        // LOCATION & ADDRESSES
         // =====================================================
         currentLocation: {
             lat: Number,
             lng: Number,
             updatedAt: Date,
         },
-
-        defaultAddress: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Address",
-        },
-
-        savedAddresses: [
+        
+        // This links to your new multiple address documents
+        addresses: [
             {
                 type: mongoose.Schema.Types.ObjectId,
-                ref: "Address",
-            },
+                ref: "Address"
+            }
         ],
-
+        
         // =====================================================
         // BOOKINGS & ACTIVITY
         // =====================================================
