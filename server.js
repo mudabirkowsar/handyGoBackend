@@ -63,6 +63,7 @@ app.use("/admin-auth", adminAuthRoutes);
 app.use("/providers", providerRoutes);
 app.use("/provider-hours", require("./routes/provider/providerHoursRoutes"));
 app.use("/provider-services", require("./routes/provider/providerServicesRoutes"));
+app.use("/provider-bookings", require("./routes/provider/providerBookingRoutes"));
 
 app.use("/companies", companyRoutes);
 app.use("/company-hours", require("./routes/company/companyHoursRoutes"));
@@ -76,6 +77,7 @@ app.use("/categories", require("./routes/category/categoryRoutes"));
 app.use("/user-category", require("./routes/user/serviceCategoryRoutes"));
 app.use("/user-providers", require("./routes/user/userProviderRoutes")); // For provider listing and details
 app.use("/user-addresses", require("./routes/user/addressRoutes")); // For managing user addresses
+app.use("/user-bookings", require("./routes/user/userBookingRoutes")); // For user booking management
 
 // --- Error Handling ---
 app.use((err, req, res, next) => {
