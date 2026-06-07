@@ -1,6 +1,9 @@
 // controllers/userProviderController.js
 
+// controllers/reviewController.js
+const Review = require("../../models/Review");
 const Provider = require("../../models/Provider");
+const mongoose = require("mongoose");
 
 // =====================================================
 // CONTROLLER 1: GET ALL NEARBY PROVIDERS (Summary List)
@@ -117,4 +120,98 @@ exports.getProviderDetails = async (req, res) => {
         }
         res.status(500).json({ success: false, message: error.message });
     }
+};
+
+exports.getProviderReviews = async (req, res) => {
+  try {
+    const { providerId } = req.params;
+
+    // Verify provider existence prior to executing database lookups
+    const providerExists = await Provider.findById(providerId);
+    if (!providerExists) {
+      return res.status(404).json({
+        success: false,
+        message: "Target service provider profile could not be identified."
+      });
+    }
+
+    // Pull individual reviews, populate author profile details, and sort by latest
+    const reviews = await Review.find({ provider: providerId })
+      .populate("user", "fullName profileImage")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: reviews.length,
+      data: reviews
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Could not retrieve customer feedback records.",
+      error: error.message
+    });
+  }
+};
+
+// @desc     Get aggregated star ratings analytics matrix breakdown for a specific Provider
+// @route    GET /api/reviews/provider/:providerId/stats
+// @access   Public
+exports.getProviderRatingStats = async (req, res) => {
+  try {
+    const { providerId } = req.params;
+
+    const providerExists = await Provider.findById(providerId);
+    if (!providerExists) {
+      return res.status(404).json({
+        success: false,
+        message: "Target service provider profile could not be identified."
+      });
+    }
+
+    // MongoDB Pipeline to aggregate general stats and count distributions simultaneously
+    const statsPipeline = await Review.aggregate([
+      { $match: { provider: new mongoose.Types.ObjectId(providerId) } },
+      {
+        $group: {
+          _id: "$provider",
+          averageRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 },
+          fiveStar: { $sum: { $cond: [{ $eq: ["$rating", 5] }, 1, 0] } },
+          fourStar: { $sum: { $cond: [{ $eq: ["$rating", 4] }, 1, 0] } },
+          threeStar: { $sum: { $cond: [{ $eq: ["$rating", 3] }, 1, 0] } },
+          twoStar: { $sum: { $cond: [{ $eq: ["$rating", 2] }, 1, 0] } },
+          oneStar: { $sum: { $cond: [{ $eq: ["$rating", 1] }, 1, 0] } }
+        }
+      }
+    ]);
+
+    // Fallback analytics matrix defaults if no ratings are found in the collections
+    const ratingSummary = statsPipeline.length > 0 ? {
+      averageRating: Math.round(statsPipeline[0].averageRating * 10) / 10,
+      totalReviews: statsPipeline[0].totalReviews,
+      breakdown: {
+        5: statsPipeline[0].fiveStar,
+        4: statsPipeline[0].fourStar,
+        3: statsPipeline[0].threeStar,
+        2: statsPipeline[0].twoStar,
+        1: statsPipeline[0].oneStar
+      }
+    } : {
+      averageRating: 0,
+      totalReviews: 0,
+      breakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+    };
+
+    res.status(200).json({
+      success: true,
+      data: ratingSummary
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Could not calculate portfolio aggregation matrices.",
+      error: error.message
+    });
+  }
 };
