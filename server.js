@@ -46,7 +46,7 @@ function getLocalIp() {
     return 'localhost';
 }
 
-// --- Routes ---
+// --- Routes --- 
 app.get('/', (req, res) => {
     res.status(200).json({
         message: "Server is running!",
@@ -59,6 +59,7 @@ app.use("/user-detail", userRoutes);
 app.use("/provider-auth", providerAuthRoutes);
 app.use("/company-auth", companyAuthRoutes);
 app.use("/admin-auth", adminAuthRoutes);
+app.use("/payment", require("./routes/payment/paymentRoutes"));
 
 app.use("/providers", providerRoutes);
 app.use("/provider-hours", require("./routes/provider/providerHoursRoutes"));

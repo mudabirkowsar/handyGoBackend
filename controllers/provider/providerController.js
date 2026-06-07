@@ -1,6 +1,7 @@
 // controllers/provider/providerController.js
 
 const Provider = require("../../models/Provider");
+const Review = require("../../models/Review");
 
 // =====================================================
 // GET MY PROFILE
@@ -96,10 +97,10 @@ const updateProviderProfile = async (req, res) => {
 
         // 3. Prevent structural mutations by stripping security-sensitive variables
         const structuralGuardrails = [
-            "role", "verificationStatus", "isBlocked", "walletBalance", 
+            "role", "verificationStatus", "isBlocked", "walletBalance",
             "totalEarnings", "tokens", "password", "email", "phone"
         ];
-        
+
         structuralGuardrails.forEach(field => {
             if (req.body[field] !== undefined) {
                 delete req.body[field];
@@ -110,7 +111,7 @@ const updateProviderProfile = async (req, res) => {
         const updatedProvider = await Provider.findByIdAndUpdate(
             providerId,
             { $set: updateData },
-            { 
+            {
                 new: true,            // Returns the newly updated object from the database
                 runValidators: true   // Forces validation checks against your schema enum arrays
             }
@@ -270,10 +271,53 @@ const updateLocation = async (req, res) => {
     }
 };
 
+const getMyOwnedReviews = async (req, res) => {
+    try {
+        // req.user.id is populated via your authentication validation middleware layer
+        const providerId = req.user.id;
+
+        // Optional pagination configuration boundaries to prevent large payload overloads
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 20;
+        const skip = (page - 1) * limit;
+
+        // Pull reviews targeting this provider, populate reviewer profile nodes, and paginate
+        const reviews = await Review.find({ provider: providerId })
+            .populate("user", "fullName profileImage")
+            .select("rating comment createdAt booking")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        // Fetch absolute item depths for pagination calculations
+        const totalReviewsCount = await Review.countDocuments({ provider: providerId });
+
+        res.status(200).json({
+            success: true,
+            count: reviews.length,
+            pagination: {
+                totalItems: totalReviewsCount,
+                currentPage: page,
+                totalPages: Math.ceil(totalReviewsCount / limit),
+                hasNextPage: skip + reviews.length < totalReviewsCount
+            },
+            data: reviews
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Could not retrieve your feedback profile stream.",
+            error: error.message
+        });
+    }
+};
+
+
 
 module.exports = {
     updateProviderProfile,
     updateAvailabilityStatus,
     updateLocation,
     getMyProfile,
+    getMyOwnedReviews,
 };

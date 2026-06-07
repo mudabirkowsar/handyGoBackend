@@ -9,6 +9,7 @@ const {
     updateProviderProfile,
     updateAvailabilityStatus,
     updateLocation,
+    getMyOwnedReviews,
 } = require("../../controllers/provider/providerController");
 
 const { protect } = require("../../middlewares/authMiddleware");
@@ -20,14 +21,11 @@ const upload = require("../../middlewares/uploadMiddleware");
 // =====================================================
 
 router.get("/me", protect, getMyProfile);
-
-router.put("/update-profile", protect, upload.single("profileImage"), updateProviderProfile
-);
-
+router.put("/update-profile", protect, upload.single("profileImage"), updateProviderProfile);
 router.put("/update-location", protect, updateLocation);
+router.put("/update-availability", protect, updateAvailabilityStatus);
+router.get("/my-reviews", protect, getMyOwnedReviews);
 
-router.put("/update-availability", protect, updateAvailabilityStatus
-);
 
 
 module.exports = router;
