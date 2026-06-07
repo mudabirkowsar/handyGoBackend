@@ -142,3 +142,55 @@ exports.cancelBookingByUser = async (req, res) => {
     res.status(500).json({ success: false, message: "Error updating cancellation", error: error.message });
   }
 };
+
+// @desc     Mark an ongoing job as completed (User confirmation)
+// @route    PUT /api/user-bookings/:id/complete
+// @access   Private (User)
+exports.completeBookingByUser = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const bookingId = req.params.id;
+
+    // Find the booking belonging to this logged-in user
+    const booking = await Booking.findOne({ _id: bookingId, user: userId });
+
+    if (!booking) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Booking record not found or unauthorized access." 
+      });
+    }
+
+    // Strict State Machine Guard: The user can ONLY complete a job if it is currently 'ongoing'
+    if (booking.bookingStatus !== "ongoing") {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot mark as completed. Job is currently '${booking.bookingStatus}', not 'ongoing'.` 
+      });
+    }
+
+    // Advance the lifecycle state
+    booking.bookingStatus = "completed";
+
+    // Financial Reconciliation Logic for COD
+    if (booking.payment.method === "COD") {
+      booking.payment.status = "paid";
+      booking.payment.paidAt = new Date();
+    }
+
+    // Persist to MongoDB
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Thank you! You have successfully confirmed job completion.",
+      data: booking,
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: "Could not process job completion state updates.", 
+      error: error.message 
+    });
+  }
+};
