@@ -1,6 +1,7 @@
 const Booking = require("../../models/Booking");
 const Provider = require("../../models/Provider");
 const Address = require("../../models/Address");
+const Review = require("../../models/Review");
 
 // @desc     Create / Checkout a new booking request
 // @route    POST /api/user-bookings
@@ -40,7 +41,7 @@ exports.checkoutBooking = async (req, res) => {
       overtimeTotal = (provider.overtimeHourlyPrice || 0) * overtimeHours;
     }
 
-    const platformFee = 50; 
+    const platformFee = 50;
     const grandTotal = basePrice + overtimeTotal + platformFee;
 
     // 4. Formulate payload based explicitly on modified model variables
@@ -155,17 +156,17 @@ exports.completeBookingByUser = async (req, res) => {
     const booking = await Booking.findOne({ _id: bookingId, user: userId });
 
     if (!booking) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Booking record not found or unauthorized access." 
+      return res.status(404).json({
+        success: false,
+        message: "Booking record not found or unauthorized access."
       });
     }
 
     // Strict State Machine Guard: The user can ONLY complete a job if it is currently 'ongoing'
     if (booking.bookingStatus !== "ongoing") {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Cannot mark as completed. Job is currently '${booking.bookingStatus}', not 'ongoing'.` 
+      return res.status(400).json({
+        success: false,
+        message: `Cannot mark as completed. Job is currently '${booking.bookingStatus}', not 'ongoing'.`
       });
     }
 
@@ -187,10 +188,52 @@ exports.completeBookingByUser = async (req, res) => {
       data: booking,
     });
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: "Could not process job completion state updates.", 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: "Could not process job completion state updates.",
+      error: error.message
     });
+  }
+};
+
+// controllers/bookingController.js
+exports.createBookingReview = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const bookingId = req.params.id;
+    const { rating, comment } = req.body;
+
+    const booking = await Booking.findOne({ _id: bookingId, user: userId });
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking record not found." });
+    }
+
+    if (booking.bookingStatus !== "completed") {
+      return res.status(400).json({ success: false, message: "You can only review completed jobs." });
+    }
+
+    // Save the review record
+    const review = await Review.create({
+      booking: bookingId,
+      user: userId,
+      provider: booking.provider,
+      rating: Number(rating),
+      comment: comment || "",
+    });
+
+    // =========================================================================
+    // CRITICAL FIX: Flip the database token switch and save it to MongoDB
+    // =========================================================================
+    booking.isReviewed = true;
+    await booking.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Review shared successfully! Thank you for your feedback.",
+      data: review,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: "Error updating review data", error: error.message });
   }
 };

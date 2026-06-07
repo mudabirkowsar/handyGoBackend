@@ -1,5 +1,4 @@
 // models/Provider.js
-
 const mongoose = require("mongoose");
 
 // Sub-schema for individual services provided by the professional
@@ -11,7 +10,6 @@ const specificServiceSchema = new mongoose.Schema({
   },
   price: {
     type: Number,
-    // required: true,
     min: 0,
   },
   description: {
@@ -116,14 +114,11 @@ const providerSchema = new mongoose.Schema(
     // PROFESSIONAL DETAILS & PRICING
     // =====================================================
     serviceProvided: {
-      type: String,
-      // required: true, // e.g., "Mehndi Artist", "Electrician"
+      type: String, // e.g., "Mehndi Artist", "Electrician"
     },
 
-    // Array of granular services with distinct pricing
     services: [specificServiceSchema],
 
-    // General default base rates requested
     perDayPrice: {
       type: Number,
       default: 0,
@@ -201,11 +196,11 @@ const providerSchema = new mongoose.Schema(
         default: false
       },
       start: {
-        type: String, // e.g., "18:00"
+        type: String,
         default: ""
       },
       end: {
-        type: String, // e.g., "22:00"
+        type: String,
         default: ""
       }
     },
@@ -373,7 +368,41 @@ const providerSchema = new mongoose.Schema(
 // =====================================================
 providerSchema.index({ location: "2dsphere" });
 providerSchema.index({ fullName: "text", skills: "text" });
-providerSchema.index({ mainCategory: 1, averageRating: -1 });
+providerSchema.index({ averageRating: -1 });
+
+// =====================================================
+// STATIC METRIC CALCULATION HOOKS
+// =====================================================
+
+/**
+ * Recalculates and stores a provider's absolute average score rating metrics.
+ * Triggers automatically from the review resolution schema route.
+ * @param {mongoose.Types.ObjectId} providerId Target Provider Reference ID
+ */
+providerSchema.statics.calculateAverageRatingMetrics = async function (providerId) {
+  const stats = await mongoose.model("Review").aggregate([
+    { $match: { provider: providerId } },
+    {
+      $group: {
+        _id: "$provider",
+        nRatings: { $sum: 1 },
+        avgRating: { $avg: "$rating" }
+      }
+    }
+  ]);
+
+  if (stats.length > 0) {
+    await this.findByIdAndUpdate(providerId, {
+      totalReviews: stats[0].nRatings,
+      averageRating: Math.round(stats[0].avgRating * 10) / 10 // Rounds to 1 decimal place (e.g. 4.7)
+    });
+  } else {
+    await this.findByIdAndUpdate(providerId, {
+      totalReviews: 0,
+      averageRating: 0
+    });
+  }
+};
 
 const Provider = mongoose.model("Provider", providerSchema);
 module.exports = Provider;

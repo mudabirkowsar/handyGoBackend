@@ -10,10 +10,9 @@ const BookingSchema = new mongoose.Schema(
     },
     provider: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Provider", // Assuming your service provider model name is 'Provider'
-      required: [true, "A booking must have a assigned service provider."],
+      ref: "Provider",
+      required: [true, "A booking must have an assigned service provider."],
     },
-    // The specific address snapshot where the provider needs to deliver the service
     address: {
       houseNumber: { type: String },
       street: { type: String, required: true },
@@ -25,19 +24,18 @@ const BookingSchema = new mongoose.Schema(
       country: { type: String, default: "India" },
       deliveryInstructions: { type: String, trim: true },
     },
-    // Schedule details configuration
     schedule: {
       bookingDate: {
         type: Date,
         required: [true, "Please specify the date for the service execution."],
       },
       startTime: {
-        type: String, // e.g., "10:00 AM" or "14:30"
+        type: String,
         required: [true, "Please specify the starting time slot."],
       },
       durationDays: {
         type: Number,
-        default: 1, // Defaulting to a single day deployment
+        default: 1,
       },
       requiresOvertime: {
         type: Boolean,
@@ -48,7 +46,6 @@ const BookingSchema = new mongoose.Schema(
         default: 0,
       },
     },
-    // Strict Pricing calculation breakdown (Checked out and validated server-side)
     pricing: {
       basePrice: {
         type: Number,
@@ -61,14 +58,13 @@ const BookingSchema = new mongoose.Schema(
       platformFee: {
         type: Number,
         required: true,
-        default: 50, // Fixed or variable convenience platform charges
+        default: 50,
       },
       grandTotal: {
         type: Number,
         required: [true, "Grand total amount is mandatory for checkout."],
       },
     },
-    // Payment status tracking architecture
     payment: {
       method: {
         type: String,
@@ -81,18 +77,25 @@ const BookingSchema = new mongoose.Schema(
         default: "pending",
       },
       transactionId: {
-        type: String, // Payment Gateway reference order ID (e.g. Razorpay Order ID)
+        type: String,
         default: "",
       },
       paidAt: {
         type: Date,
       },
     },
-    // Core functional business status machine
     bookingStatus: {
       type: String,
       enum: ["requested", "accepted", "rejected", "ongoing", "completed", "cancelled"],
       default: "requested",
+    },
+    // =========================================================================
+    // NEW PERSISTENT FIELD: Tracks if the user has finalized rating submissions
+    // =========================================================================
+    isReviewed: {
+      type: Boolean,
+      default: false,
+      required: true
     },
     cancellation: {
       cancelledBy: { type: String, enum: ["user", "provider", "admin"] },
@@ -100,17 +103,16 @@ const BookingSchema = new mongoose.Schema(
       cancelledAt: { type: Date },
     },
     notes: {
-      type: String, // Special custom instructions left by the user during checkout
+      type: String,
       trim: true,
       maxLength: [500, "Instructions cannot exceed 500 characters."],
     },
   },
   {
-    timestamps: true, // Tracks automatic generation of createdAt and updatedAt dates
+    timestamps: true,
   }
 );
 
-// Compound Indexing for optimized database reads during pipeline updates
 BookingSchema.index({ user: 1, bookingStatus: 1 });
 BookingSchema.index({ provider: 1, bookingStatus: 1 });
 
