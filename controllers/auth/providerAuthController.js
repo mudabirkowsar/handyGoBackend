@@ -173,7 +173,7 @@ const loginProvider = async (req, res) => {
 // ==========================================
 const uploadProviderDocuments = async (req, res) => {
     try {
-        const providerId = req.user._id; // Set by Auth Middleware
+        const providerId = req.user._id; 
         const provider = await Provider.findById(providerId);
 
         if (!provider) {
@@ -182,27 +182,47 @@ const uploadProviderDocuments = async (req, res) => {
 
         const { aadhaarNumber, panNumber } = req.body;
 
+        // Update text fields
         if (aadhaarNumber) provider.aadhaarNumber = aadhaarNumber;
-        if (panNumber) provider.panNumber = panNumber;
+        if (panNumber) provider.panNumber = panNumber.toUpperCase();
 
-        // Handle File uploads via Multer
+        // Handle File uploads via Multer (upload.fields)
+        // Multer puts files in req.files[fieldName][0]
         if (req.files) {
-            if (req.files['aadhaarFrontImage']) provider.aadhaarFrontImage = req.files['aadhaarFrontImage'][0].path;
-            if (req.files['aadhaarBackImage']) provider.aadhaarBackImage = req.files['aadhaarBackImage'][0].path;
-            if (req.files['selfieImage']) provider.selfieImage = req.files['selfieImage'][0].path;
+            if (req.files['aadhaarFrontImage'] && req.files['aadhaarFrontImage'][0]) {
+                provider.aadhaarFrontImage = req.files['aadhaarFrontImage'][0].path;
+            }
+            if (req.files['aadhaarBackImage'] && req.files['aadhaarBackImage'][0]) {
+                provider.aadhaarBackImage = req.files['aadhaarBackImage'][0].path;
+            }
+            if (req.files['selfieImage'] && req.files['selfieImage'][0]) {
+                provider.selfieImage = req.files['selfieImage'][0].path;
+            }
         }
 
-        provider.verificationStatus = "pending"; // Now wait for admin
+        // Only move to pending if all documents are present
+        if (provider.aadhaarFrontImage && provider.aadhaarBackImage && provider.selfieImage) {
+            provider.verificationStatus = "pending";
+        }
+
         await provider.save();
 
         res.status(200).json({
             success: true,
-            message: "Documents uploaded. Verification is now pending admin review.",
-            verificationStatus: provider.verificationStatus
+            message: "Documents uploaded successfully. Admin review pending.",
+            provider: {
+                verificationStatus: provider.verificationStatus,
+                aadhaarNumber: provider.aadhaarNumber,
+                panNumber: provider.panNumber
+            }
         });
     } catch (error) {
         console.error("Error in uploadProviderDocuments:", error);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ 
+            success: false, 
+            message: "Failed to process documents.", 
+            error: error.message 
+        });
     }
 };
 
