@@ -40,104 +40,93 @@ const getMyProfile = async (req, res) => {
 // =====================================================
 const updateProviderProfile = async (req, res) => {
     try {
-        const providerId = req.user._id; // Populated from your auth verification middleware
-
-        // 1. Explicitly destructure allowed fields directly from req.body
-        const {
-            fullName,
-            bio,
-            gender,
-            dateOfBirth,
-            languages,
-            experienceYears,
-            skills,
-            serviceProvided,
-            address,
-            bankDetails,
-            notificationPreferences,
-            profileImage
-        } = req.body;
-
-        // 2. Construct a flat update payload object using MongoDB dot-notation
+        const providerId = req.user._id;
         const updateData = {};
 
-        // Top-level primitive fields validation and assignment
-        if (fullName !== undefined) updateData.fullName = fullName.trim();
-        if (bio !== undefined) updateData.bio = bio;
-        if (gender !== undefined) updateData.gender = gender;
-        if (dateOfBirth !== undefined) updateData.dateOfBirth = dateOfBirth;
-        if (experienceYears !== undefined) updateData.experienceYears = Number(experienceYears);
-        if (serviceProvided !== undefined) updateData.serviceProvided = serviceProvided;
-        if (profileImage !== undefined) updateData.profileImage = profileImage;
+        // --- 1. RECONSTRUCT NESTED OBJECTS FROM FORM-DATA ---
+        const processedBody = {};
 
-        // Array conversions (Safeguarded against parsing null or undefined values)
-        if (Array.isArray(languages)) updateData.languages = languages;
-        if (Array.isArray(skills)) updateData.skills = skills;
-
-        // Nested Structure 1: Address Object (Safely targets keys dynamically)
-        if (address && typeof address === "object") {
-            Object.keys(address).forEach((key) => {
-                updateData[`address.${key}`] = address[key];
-            });
-        }
-
-        // Nested Structure 2: Bank Details Object
-        if (bankDetails && typeof bankDetails === "object") {
-            Object.keys(bankDetails).forEach((key) => {
-                updateData[`bankDetails.${key}`] = bankDetails[key];
-            });
-        }
-
-        // Nested Structure 3: Notification Preferences Object
-        if (notificationPreferences && typeof notificationPreferences === "object") {
-            Object.keys(notificationPreferences).forEach((key) => {
-                updateData[`notificationPreferences.${key}`] = notificationPreferences[key];
-            });
-        }
-
-        // 3. Prevent structural mutations by stripping security-sensitive variables
-        const structuralGuardrails = [
-            "role", "verificationStatus", "isBlocked", "walletBalance",
-            "totalEarnings", "tokens", "password", "email", "phone"
-        ];
-
-        structuralGuardrails.forEach(field => {
-            if (req.body[field] !== undefined) {
-                delete req.body[field];
+        Object.keys(req.body).forEach((key) => {
+            // Handle Nested Objects (e.g., address.city)
+            if (key.includes('.')) {
+                const [parent, child] = key.split('.');
+                if (!processedBody[parent]) processedBody[parent] = {};
+                processedBody[parent][child] = req.body[key];
+            } 
+            // Handle Arrays (e.g., skills[])
+            else if (key.endsWith('[]')) {
+                const cleanKey = key.replace('[]', '');
+                if (!processedBody[cleanKey]) processedBody[cleanKey] = [];
+                if (Array.isArray(req.body[key])) {
+                    processedBody[cleanKey] = req.body[key];
+                } else {
+                    processedBody[cleanKey].push(req.body[key]);
+                }
+            } 
+            // Handle Normal Fields
+            else {
+                processedBody[key] = req.body[key];
             }
         });
 
-        // 4. Fire the update tracking document directly to MongoDB
+        // --- 2. MAP TO MONGODB UPDATE OBJECT ---
+        
+        // Primitive fields
+        if (processedBody.fullName) updateData.fullName = processedBody.fullName.trim();
+        if (processedBody.bio) updateData.bio = processedBody.bio;
+        if (processedBody.gender) updateData.gender = processedBody.gender;
+        if (processedBody.dateOfBirth) updateData.dateOfBirth = processedBody.dateOfBirth;
+        if (processedBody.experienceYears) updateData.experienceYears = Number(processedBody.experienceYears);
+        if (processedBody.serviceProvided) updateData.serviceProvided = processedBody.serviceProvided;
+
+        // Arrays
+        if (processedBody.languages) updateData.languages = processedBody.languages;
+        if (processedBody.skills) updateData.skills = processedBody.skills;
+
+        // --- 3. CLOUDINARY IMAGE HANDLING ---
+        // If Multer successfully uploaded to Cloudinary, req.file.path exists
+        if (req.file && req.file.path) {
+            updateData.profileImage = req.file.path; 
+        }
+
+        // --- 4. NESTED STRUCTURES (Address, Bank, Notifications) ---
+        // We use dot-notation for $set to avoid overwriting the entire sub-document
+        const nestedSections = ['address', 'bankDetails', 'notificationPreferences'];
+        
+        nestedSections.forEach(section => {
+            if (processedBody[section] && typeof processedBody[section] === 'object') {
+                Object.keys(processedBody[section]).forEach(key => {
+                    let value = processedBody[section][key];
+                    
+                    // Boolean conversion for notification toggles
+                    if (value === "true") value = true;
+                    if (value === "false") value = false;
+                    
+                    updateData[`${section}.${key}`] = (typeof value === 'string') ? value.trim() : value;
+                });
+            }
+        });
+
+        // --- 5. EXECUTE DATABASE UPDATE ---
         const updatedProvider = await Provider.findByIdAndUpdate(
             providerId,
             { $set: updateData },
-            {
-                new: true,            // Returns the newly updated object from the database
-                runValidators: true   // Forces validation checks against your schema enum arrays
-            }
-        ).select("-password -tokens -refreshToken"); // Omit sensitive data tokens from output
+            { new: true, runValidators: true }
+        ).select("-password -tokens");
 
         if (!updatedProvider) {
-            return res.status(404).json({
-                success: false,
-                message: "Provider profile record not found.",
-            });
+            return res.status(404).json({ success: false, message: "Provider not found." });
         }
 
-        // 5. Send back full update payload data confirmation
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
             message: "Profile updated successfully.",
-            provider: updatedProvider,
+            provider: updatedProvider
         });
 
     } catch (error) {
-        console.error("Critical error in updateProviderProfile controller:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Server Error: Unable to modify operational profile metrics.",
-            error: error.message,
-        });
+        console.error("Update Error:", error);
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 // =====================================================

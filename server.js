@@ -96,5 +96,5 @@ app.listen(PORT, '0.0.0.0', () => {
 
     console.log(`\n✅ Server is live!`);
     console.log(`📱 On your Mobile Phone, go to: http://${ip}:${PORT}`);
-    console.log(`💻 On this Computer, go to: http://localhost:${PORT}\n`);
+    console.log(`💻 On this Computer, go to: http://localhost:${PORT}\n`); 
 }); 
