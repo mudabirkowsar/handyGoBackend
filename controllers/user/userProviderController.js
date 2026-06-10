@@ -57,6 +57,8 @@ exports.getNearbyProviders = async (req, res) => {
                     fullName: 1,
                     profileImage: 1,
                     bio: 1,
+                    gender: 1,
+                    experienceYears: 1,
                     serviceProvided: 1,
                     perDayPrice: 1,
                     averageRating: 1,
